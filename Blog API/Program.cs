@@ -2,7 +2,6 @@ using Blog_API.Data;
 using Blog_API.Models;
 using Blog_API.Services.Implementation;
 using Blog_API.Services.Interface;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;

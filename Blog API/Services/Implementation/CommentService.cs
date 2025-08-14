@@ -12,11 +12,9 @@ namespace Blog_API.Services.Implementation
     public class CommentService : ICommentService
     {
         private readonly BlogDbContext _context;
-        private readonly IAuthService _authService;
-        public CommentService(BlogDbContext context, IAuthService authService)
+        public CommentService(BlogDbContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _authService = authService;
         }
         
         public async Task<CommentDTO> CreateCommentAsync(CreateCommentDTO commentDTO, string userId)
@@ -64,9 +62,10 @@ namespace Blog_API.Services.Implementation
             
         }
 
-        public async Task<IEnumerable<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId)
+        public async Task<IReadOnlyCollection<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId)
         {
             // blogPostId is not found exception
+
             if (!await _context.blogPosts.AnyAsync(bp => bp.Id == blogPostId))
             {
                 throw new KeyNotFoundException($"Blog Post with ID {blogPostId} not found.");

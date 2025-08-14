@@ -4,6 +4,7 @@ using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Blog_API.Controllers
 {
@@ -31,14 +32,13 @@ namespace Blog_API.Controllers
                 _logger.LogInformation($"Retrieved {blogPosts.Count()} blog posts.");
                 return Ok(blogPosts);
             }
-            catch (ArgumentNullException ex)
+            catch (KeyNotFoundException ex)
             {
                 _logger.LogError(ex, "No blog posts found.");
                 return NotFound("No blog posts found: " + ex.Message);
             }
             catch (Exception ex)
             {
-                // Log the exception (not shown here for brevity)
                 _logger.LogError(ex, "An error occurred while fetching blog posts.");
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
@@ -49,51 +49,47 @@ namespace Blog_API.Controllers
         public async Task<IActionResult> CreateBlogPost([FromBody] CreateBlogPostDTO blogPostDTO)
         {
             _logger.LogInformation("Creating a new blog post.");
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null)
+            try
             {
-                try
-                {
-                    var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, user.Id);
-                    _logger.LogInformation($"Blog post created successfully");
-                    return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
-                }
-                catch (ArgumentNullException ex)
-                {
-                    _logger.LogError(ex, "Invalid blog post data.");
-                    return BadRequest("Invalid blog post data: " + ex.Message);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "An error occurred while creating the blog post.");
-                    // Log the exception (not shown here for brevity)
-                    return StatusCode(500, "Internal server error: " + ex.Message);
-                }
+                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, currentUserId);
+
+                _logger.LogInformation($"Blog post created successfully");
+                return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
             }
-            else
+
+            catch (Exception ex)
             {
-                _logger.LogWarning("Unauthorized attempt to create a blog post.");
-                return Unauthorized("User not authenticated.");
+                _logger.LogError(ex, "An error occurred while creating the blog post.");
+                return StatusCode(500, "Internal server error: " + ex.Message);
             }
+
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBlogPostById(Guid id)
         {
+            _logger.LogInformation($"Fetching blod post ID: {id}");
             try
             {
                 var blogPost = await _blogPostService.GetBlogPostByIdAsync(id);
+                _logger.LogInformation($"Blog post with ID: {id} retrieved successfully.");
                 return Ok(blogPost);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogError(ex.Message);
+                return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
-                // Log the exception (not shown here for brevity)
+                _logger.LogError(ex, "Blog post not found.");
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }
 
         [HttpPut("{id}")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> UpdateBlogPost (Guid id, CreateBlogPostDTO blogPostDTO)
         {
             _logger.LogInformation($"Updating blog post with ID: {id}");
@@ -103,15 +99,14 @@ namespace Blog_API.Controllers
                 _logger.LogInformation($"Blog post with ID: {id} updated successfully.");
                 return Ok("Blog post updated successfully.");
             }
-            catch (ArgumentNullException ex)
+            catch (KeyNotFoundException ex)
             {
-                _logger.LogError(ex, "Invalid blog post data.");
-                return BadRequest("Invalid blog post data: " + ex.Message);
+                _logger.LogError(ex, "Blog post not found.");
+                return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while updating the blog post.");
-                // Log the exception (not shown here for brevity)
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }
@@ -122,19 +117,25 @@ namespace Blog_API.Controllers
             _logger.LogInformation($"Deleting blog post with ID: {id}");
             try
             {
-                await _blogPostService.DeleteBlogPostAsync(id);
+                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                await _blogPostService.DeleteBlogPostAsync(id, currentUserId);
+
                 _logger.LogInformation($"Blog post with ID: {id} deleted successfully.");
-                return Ok("Blog post deleted successfully.");
+                return NoContent();
             }
-            catch (ArgumentNullException ex)
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, $": Unauthorized access attempt to delete blog post with ID: {id}");
+                return Forbid();
+            }
+            catch (KeyNotFoundException ex)
             {
                 _logger.LogError(ex, "Blog post not found.");
-                return NotFound("Blog post not found: " + ex.Message);
+                return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while deleting the blog post.");
-                // Log the exception (not shown here for brevity)
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }

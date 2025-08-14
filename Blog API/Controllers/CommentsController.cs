@@ -27,9 +27,10 @@ namespace Blog_API.Controllers
             try
             {
                 var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                var createdCommentDTO = await _commentService.CreateCommentAsync(commentDTO, currentUserId);
-                _logger.LogInformation($"Comment created successfully with ID: {createdCommentDTO.Id}");
-                return CreatedAtAction(nameof(GetCommentById), new { id = createdCommentDTO.Id }, createdCommentDTO);
+                var createdComment = await _commentService.CreateCommentAsync(commentDTO, currentUserId);
+
+                _logger.LogInformation($"Comment created successfully with ID: {createdComment.Id}");
+                return CreatedAtAction(nameof(GetCommentById), new { id = createdComment.Id }, createdComment);
             }
             catch (Exception ex)
             {

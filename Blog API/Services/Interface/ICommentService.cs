@@ -1,5 +1,4 @@
 ﻿using Blog_API.DTOs;
-using Blog_API.Models;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +12,7 @@ namespace Blog_API.Services.Interface
         // 3) Edit Existing Comment
         // 4) Delete Comment
         // 5) Get Comment by ID
-        Task<IEnumerable<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId);
+        Task<IReadOnlyCollection<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId);
         Task<CommentDTO> CreateCommentAsync(CreateCommentDTO commentDTO, string userId);
         Task<CommentDTO> GetCommentByIdAsync(Guid commentId);
         Task UpdateCommentAsync(Guid commentId, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId);
