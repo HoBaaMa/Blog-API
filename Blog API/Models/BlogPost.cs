@@ -10,5 +10,6 @@
         public string UserId { get; set; }
         public ApplicationUser User { get; set; }
         public ICollection<Comment> Comments { get; set; }
+        public ICollection<Like> Likes { get; set; }
     }
 }

@@ -9,5 +9,10 @@
         public BlogPost BlogPost { get; set; }
         public string UserId { get; set; }
         public ApplicationUser User { get; set; }
+        public ICollection<Like> Likes { get; set; }
+        public Guid? ParentCommentId { get; set; }
+        public Comment ParentComment { get; set; }
+        public ICollection<Comment> Replies { get; set; }
+
     }
 }

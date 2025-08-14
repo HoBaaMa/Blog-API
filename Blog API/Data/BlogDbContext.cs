@@ -12,6 +12,7 @@ namespace Blog_API.Data
         public DbSet<ApplicationUser> applicationUsers { get; set; }
         public DbSet<BlogPost> blogPosts { get; set; }
         public DbSet<Comment> comments { get; set; }
+        public DbSet<Like> likes { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -64,6 +65,36 @@ namespace Blog_API.Data
                 .HasForeignKey(e => e.BlogPostId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+                e.HasOne(e => e.ParentComment)
+                .WithMany(e => e.Replies)
+                .HasForeignKey(e => e.ParentCommentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            });
+            modelBuilder.Entity<Like>(l =>
+            {
+                l.HasKey(l => l.Id);
+
+                l.Property(l => l.CreatedAt)
+                .HasDefaultValueSql("GETDATE()");
+
+                l.HasOne(l => l.User)
+                .WithMany(l => l.Likes)
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+                l.HasOne(l => l.BlogPost)
+                .WithMany(l => l.Likes)
+                .HasForeignKey(l => l.BlogPostId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+                l.HasOne(l => l.comment)
+                .WithMany(l => l.Likes)
+                .HasForeignKey(l => l.CommentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+                l.HasIndex(e => new { e.UserId, e.BlogPostId }).IsUnique();
+                l.HasIndex(e => new { e.UserId, e.CommentId }).IsUnique();
 
             });
         }

@@ -6,6 +6,8 @@ namespace Blog_API.Models
     {
         public ICollection<BlogPost> BlogPosts { get; set; } = new List<BlogPost>();
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+        public ICollection<Like> Likes { get; set; } = new List<Like>();
+
         // Additional properties can be added here if needed
         // For example, you might want to add a DisplayName or ProfilePictureUrl
         // public string DisplayName { get; set; }
