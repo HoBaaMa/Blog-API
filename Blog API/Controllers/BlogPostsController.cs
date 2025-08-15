@@ -1,8 +1,6 @@
 ﻿using Blog_API.DTOs;
-using Blog_API.Models;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -13,12 +11,10 @@ namespace Blog_API.Controllers
     public class BlogPostsController : ControllerBase
     {
         private readonly IBlogPostService _blogPostService;
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<BlogPostsController> _logger;
-        public BlogPostsController(IBlogPostService blogPostService, UserManager<ApplicationUser> userManager, ILogger<BlogPostsController> logger)
+        public BlogPostsController(IBlogPostService blogPostService, ILogger<BlogPostsController> logger)
         {
             _blogPostService = blogPostService ?? throw new ArgumentNullException(nameof(blogPostService));
-            _userManager = userManager;
             _logger = logger;
         }
 
@@ -54,7 +50,7 @@ namespace Blog_API.Controllers
                 var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
                 var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, currentUserId);
 
-                _logger.LogInformation($"Blog post created successfully");
+                _logger.LogInformation($"Blog post created successfully.");
                 return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
             }
 
@@ -66,7 +62,7 @@ namespace Blog_API.Controllers
 
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetBlogPostById(Guid id)
         {
             _logger.LogInformation($"Fetching blod post ID: {id}");
@@ -78,21 +74,21 @@ namespace Blog_API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
-                _logger.LogError(ex.Message);
+                _logger.LogWarning(ex, $"Blog post with ID: {id} not found.");
                 return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Blog post not found.");
+                _logger.LogError(ex, $"Error retrieving blog post with ID: {id}");
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:guid}")]
         [Authorize]
-        public async Task<IActionResult> UpdateBlogPost (Guid id, CreateBlogPostDTO blogPostDTO)
+        public async Task<IActionResult> UpdateBlogPost (Guid id,[FromBody] CreateBlogPostDTO blogPostDTO)
         {
-            _logger.LogInformation($"Updating blog post with ID: {id}");
+            _logger.LogInformation($"Updating blog post with ID: {id}.");
             try
             {
                 await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO);
@@ -101,20 +97,20 @@ namespace Blog_API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
-                _logger.LogError(ex, "Blog post not found.");
+                _logger.LogWarning(ex, $"Blog post with ID: {id} not found.");
                 return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while updating the blog post.");
+                _logger.LogError(ex, $"Error updating blog post with ID: {id}.");
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }
-        [HttpDelete("{id}")]
-        //[Authorize]
+        [HttpDelete("{id:guid}")]
+        [Authorize]
         public async Task<IActionResult> DeleteBlogPost (Guid id)
         {
-            _logger.LogInformation($"Deleting blog post with ID: {id}");
+            _logger.LogInformation($"Deleting blog post with ID: {id}.");
             try
             {
                 var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -125,12 +121,12 @@ namespace Blog_API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogError(ex, $": Unauthorized access attempt to delete blog post with ID: {id}");
+                _logger.LogWarning(ex, $": Unauthorized access attempt to update blog post with ID: {id}.");
                 return Forbid();
             }
             catch (KeyNotFoundException ex)
             {
-                _logger.LogError(ex, "Blog post not found.");
+                _logger.LogWarning(ex, $"Blog post with ID: {id} not found for deletion.");
                 return NotFound(ex.Message);
             }
             catch (Exception ex)

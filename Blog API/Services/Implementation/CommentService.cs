@@ -26,6 +26,21 @@ namespace Blog_API.Services.Implementation
                 ParentCommentId = commentDTO.ParentCommentId,
                 UserId = userId
             };
+
+            /*
+             * Brainstorming:
+             * ParentCommentId = null => means it's top-level comment
+             * ParenctCommentId != null => means it's a reply to the parent comment with that ID
+             * EF Core will handle the relationship automatically and add the reply comment to the Replies collection of the parent comment.
+             */
+            if (commentDTO.ParentCommentId.HasValue)
+            {
+                bool parentExists = await _context.comments.AnyAsync(c => c.Id == commentDTO.ParentCommentId.Value && c.BlogPostId == commentDTO.BlogPostId);
+                if (!parentExists)
+                {
+                    throw new KeyNotFoundException($"Parent comment with ID: {commentDTO.ParentCommentId.Value} not found.");
+                }
+            }
             await _context.comments.AddAsync(comment);
             await _context.SaveChangesAsync();
 
@@ -35,8 +50,8 @@ namespace Blog_API.Services.Implementation
                 Content = comment.Content,
                 CreatedAt = comment.CreatedAt,
                 UserId = comment.UserId,
-                UserName = comment.User?.UserName ?? "Unknown",
-                LikeCount = comment.Likes?.Count() ?? 0,
+                UserName = comment.User.UserName!,
+                LikeCount = comment.Likes.Count,
                 ParentCommentId = comment.ParentCommentId
             };
             return responseDTO;
@@ -81,8 +96,7 @@ namespace Blog_API.Services.Implementation
                     Content = c.Content,
                     CreatedAt = c.CreatedAt,
                     UserId = c.UserId,
-                    // Avoid ?. in expression trees
-                    UserName = c.User != null ? c.User.UserName : "Unknown",
+                    UserName = c.User.UserName!,
                     // Count on collection navigation translates; no null-propagation needed
                     LikeCount = c.Likes.Count(),
                     ParentCommentId = c.ParentCommentId
@@ -97,12 +111,16 @@ namespace Blog_API.Services.Implementation
             return comments;
         }
 
-        public async Task<CommentDTO> GetCommentByIdAsync(Guid commentId)
+        public async Task<CommentDTO?> GetCommentByIdAsync(Guid commentId)
         {
             var comment = await _context.comments
                 .Include(c => c.User)
                 .Include(l => l.Likes)
                 .Include(r => r.Replies)
+                    .ThenInclude(r => r.User)
+                .Include(r => r.Replies)
+                    .ThenInclude(u => u.Likes)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null)
@@ -110,15 +128,25 @@ namespace Blog_API.Services.Implementation
                 throw new KeyNotFoundException($"Comment with ID {commentId} not found.");
             }
 
-            var responseDTO = new CommentDTO 
+            var responseDTO = new CommentDTO
             {
                 Id = comment.Id,
                 Content = comment.Content,
                 CreatedAt = comment.CreatedAt,
                 UserId = comment.UserId,
-                UserName = comment.User?.UserName ?? "Unknown",
-                LikeCount = comment.Likes?.Count() ?? 0,
-                ParentCommentId = comment.ParentCommentId
+                UserName = comment.User.UserName!,
+                LikeCount = comment.Likes.Count,
+                ParentCommentId = comment.ParentCommentId,
+                Replies = comment.Replies.Select(r => new CommentDTO
+                {
+                    Id = r.Id,
+                    Content = r.Content,
+                    CreatedAt = r.CreatedAt,
+                    UserId = r.UserId,
+                    UserName = r.User.UserName!,
+                    LikeCount = r.Likes.Count,
+                    ParentCommentId = r.ParentCommentId
+                }).ToList()
             };
 
             return responseDTO;

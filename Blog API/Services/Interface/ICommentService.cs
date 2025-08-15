@@ -1,6 +1,5 @@
 ﻿using Blog_API.DTOs;
 using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Blog_API.Services.Interface
 {
@@ -14,8 +13,8 @@ namespace Blog_API.Services.Interface
         // 5) Get Comment by ID
         Task<IReadOnlyCollection<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId);
         Task<CommentDTO> CreateCommentAsync(CreateCommentDTO commentDTO, string userId);
-        Task<CommentDTO> GetCommentByIdAsync(Guid commentId);
-        Task UpdateCommentAsync(Guid commentId, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId);
+        Task<CommentDTO?> GetCommentByIdAsync(Guid commentId);
+        Task UpdateCommentAsync(Guid commentId, JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId);
         Task DeleteCommentAsync(Guid commendId, string currentUserId);
     }
 }
