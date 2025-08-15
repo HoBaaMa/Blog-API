@@ -6,17 +6,16 @@ A comprehensive ASP.NET Core Web API for a blog platform, featuring posts, comme
 
 ## 📋 Table of Contents
 
-  - [✨ Features](https://www.google.com/search?q=%23-features)
-  - [🧰 Technologies Used](https://www.google.com/search?q=%23-technologies-used)
-  - [🚀 Getting Started](https://www.google.com/search?q=%23-getting-started)
-      - [🔧 Prerequisites](https://www.google.com/search?q=%23-prerequisites)
-      - [⚙️ Setup](https://www.google.com/search?q=%23setup)
-  - [🌐 API Endpoints](https://www.google.com/search?q=%23-api-endpoints)
-  - [🧱 Models](https://www.google.com/search?q=%23-models)
-  - [❗ Error Handling](https://www.google.com/search?q=%23-error-handling)
-  - [📦 Required NuGet Packages](https://www.google.com/search?q=%23-required-nuget-packages)
-  - [🪪 License](https://www.google.com/search?q=%23-license)
-
+- [✨ Features](#-features)
+- [🧰 Technologies Used](#-technologies-used)
+- [🚀 Getting Started](#-getting-started)
+  - [🔧 Prerequisites](#-prerequisites)
+  - [⚙️ Setup](#setup)
+- [🌐 API Endpoints](#-api-endpoints)
+- [🧱 Model](#-model)
+- [❗ Error Handling](#-error-handling)
+- [📦 Required NuGet Packages](#-required-nuget-packages)
+- [🪪 License](#-license)
 -----
 
 ## ✨ Features
