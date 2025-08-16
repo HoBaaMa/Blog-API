@@ -9,6 +9,6 @@
         public Guid? BlogPostId { get; set; }
         public BlogPost BlogPost { get; set; }
         public Guid? CommentId { get; set; }
-        public Comment comment { get; set; }
+        public Comment Comment { get; set; }
     }
 }
