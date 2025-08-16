@@ -88,7 +88,7 @@ namespace Blog_API.Data
                 .HasForeignKey(l => l.BlogPostId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-                l.HasOne(l => l.comment)
+                l.HasOne(l => l.Comment)
                 .WithMany(l => l.Likes)
                 .HasForeignKey(l => l.CommentId)
                 .OnDelete(DeleteBehavior.Restrict);

@@ -72,6 +72,7 @@ namespace Blog_API.Services.Implementation
             var blogPosts = await _context.blogPosts
                 .Include(bp => bp.User)
                 .Include(bp => bp.Comments)
+                .AsNoTracking()
                 .ToListAsync();
 
             if (blogPosts.Count == 0)

@@ -126,7 +126,7 @@ namespace Blog_API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("blogPosts");
+                    b.ToTable("blogPosts", (string)null);
                 });
 
             modelBuilder.Entity("Blog_API.Models.Comment", b =>
@@ -162,7 +162,7 @@ namespace Blog_API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("comments");
+                    b.ToTable("comments", (string)null);
                 });
 
             modelBuilder.Entity("Blog_API.Models.Like", b =>
@@ -200,7 +200,7 @@ namespace Blog_API.Migrations
                         .IsUnique()
                         .HasFilter("[CommentId] IS NOT NULL");
 
-                    b.ToTable("likes");
+                    b.ToTable("likes", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
