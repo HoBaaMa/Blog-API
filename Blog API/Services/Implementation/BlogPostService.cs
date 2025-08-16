@@ -72,6 +72,7 @@ namespace Blog_API.Services.Implementation
             var blogPosts = await _context.blogPosts
                 .Include(bp => bp.User)
                 .Include(bp => bp.Comments)
+                .Include(bp => bp.Likes)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -86,7 +87,8 @@ namespace Blog_API.Services.Implementation
                 Content = bp.Content,
                 CreatedAt = bp.CreatedAt,
                 UserId = bp.UserId,
-                UserName = bp.User?.UserName ?? "Unknown User",
+                UserName = bp.User?.UserName!,
+                LikeCount = bp.Likes.Count
             }).ToList();
 
             return blogPostsDTOs;
@@ -97,6 +99,7 @@ namespace Blog_API.Services.Implementation
             var blogPost = await _context.blogPosts
                 .Include(bp => bp.User)
                 .Include(bp => bp.Comments)
+                .Include(bp => bp.Likes)
                 .FirstOrDefaultAsync(bp => bp.Id == id);
 
             if (blogPost == null)
@@ -111,7 +114,8 @@ namespace Blog_API.Services.Implementation
                 Content = blogPost.Content,
                 CreatedAt = blogPost.CreatedAt,
                 UserId = blogPost.UserId,
-                UserName = blogPost.User.UserName!
+                UserName = blogPost.User.UserName!,
+                LikeCount = blogPost.Likes.Count
             };
         }
 

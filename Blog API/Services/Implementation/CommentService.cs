@@ -89,6 +89,10 @@ namespace Blog_API.Services.Implementation
             // Use AsNoTracking for read-only queries to improve performance
             var comments = await _context.comments
                 .Where(c => c.BlogPostId == blogPostId)
+                .Include(c => c.Replies)
+                    .ThenInclude(r => r.User)
+                .Include(c => c.Replies)
+                    .ThenInclude(r => r.Likes)
                 .AsNoTracking()
                 .Select(c => new CommentDTO
                 {
@@ -99,9 +103,18 @@ namespace Blog_API.Services.Implementation
                     UserName = c.User.UserName!,
                     // Count on collection navigation translates; no null-propagation needed
                     LikeCount = c.Likes.Count(),
-                    ParentCommentId = c.ParentCommentId
-                })
-                .ToListAsync();
+                    ParentCommentId = c.ParentCommentId,
+                    Replies = c.Replies.Select(r => new CommentDTO
+                    {
+                        Id = r.Id,
+                        Content = r.Content,
+                        CreatedAt = r.CreatedAt,
+                        UserId = r.UserId,
+                        UserName = r.User.UserName!,
+                        LikeCount = r.Likes.Count,
+                        ParentCommentId = r.ParentCommentId
+                    }).ToList()
+                }).ToListAsync();
 
             if (comments.Count() == 0)
             {
