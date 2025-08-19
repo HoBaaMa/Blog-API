@@ -14,7 +14,7 @@ namespace Blog_API.Services.Interface
         Task<IReadOnlyCollection<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId);
         Task<CommentDTO> CreateCommentAsync(CreateCommentDTO commentDTO, string userId);
         Task<CommentDTO?> GetCommentByIdAsync(Guid commentId);
-        Task UpdateCommentAsync(Guid commentId, JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId);
+        Task<CommentDTO> UpdateCommentAsync(Guid commentId, JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId);
         Task DeleteCommentAsync(Guid commendId, string currentUserId);
     }
 }

@@ -28,6 +28,12 @@ builder.Services
     .AddEntityFrameworkStores<BlogDbContext>()
     .AddDefaultTokenProviders();
 
+
+// Register AutoMapper (scans the assembly for Profile)
+// This scans the assembly containing Program class for any classes inheriting Profile 
+// and registers them automatically.
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
+
 // Prevent redirects on 401/403 for API
 builder.Services.ConfigureApplicationCookie(options =>
 {

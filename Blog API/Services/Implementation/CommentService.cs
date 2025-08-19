@@ -6,15 +6,19 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Blog_API.Exceptions;
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 
 namespace Blog_API.Services.Implementation
 {
     public class CommentService : ICommentService
     {
         private readonly BlogDbContext _context;
-        public CommentService(BlogDbContext context)
+        private readonly IMapper _mapper;
+        public CommentService(BlogDbContext context, IMapper mapper)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _mapper = mapper;
         }
         
         public async Task<CommentDTO> CreateCommentAsync(CreateCommentDTO commentDTO, string userId)
@@ -44,17 +48,8 @@ namespace Blog_API.Services.Implementation
             await _context.comments.AddAsync(comment);
             await _context.SaveChangesAsync();
 
-            var responseDTO = new CommentDTO
-            {
-                Id = comment.Id,
-                Content = comment.Content,
-                CreatedAt = comment.CreatedAt,
-                UserId = comment.UserId,
-                UserName = comment.User.UserName!,
-                LikeCount = comment.Likes.Count,
-                ParentCommentId = comment.ParentCommentId
-            };
-            return responseDTO;
+
+            return _mapper.Map<CommentDTO>(comment);
         }
 
         public async Task DeleteCommentAsync(Guid commentId, string currentUserId)
@@ -87,34 +82,19 @@ namespace Blog_API.Services.Implementation
             }
 
             // Use AsNoTracking for read-only queries to improve performance
+            //var comments = await _context.comments
+            //    .Where(c => c.BlogPostId == blogPostId)
+            //    .Include(c => c.Replies)
+            //        .ThenInclude(r => r.User)
+            //    .Include(c => c.Replies)
+            //        .ThenInclude(r => r.Likes)
+            //    .AsNoTracking()
+            //    .ToListAsync();
+
             var comments = await _context.comments
-                .Where(c => c.BlogPostId == blogPostId)
-                .Include(c => c.Replies)
-                    .ThenInclude(r => r.User)
-                .Include(c => c.Replies)
-                    .ThenInclude(r => r.Likes)
                 .AsNoTracking()
-                .Select(c => new CommentDTO
-                {
-                    Id = c.Id,
-                    Content = c.Content,
-                    CreatedAt = c.CreatedAt,
-                    UserId = c.UserId,
-                    UserName = c.User.UserName!,
-                    // Count on collection navigation translates; no null-propagation needed
-                    LikeCount = c.Likes.Count(),
-                    ParentCommentId = c.ParentCommentId,
-                    Replies = c.Replies.Select(r => new CommentDTO
-                    {
-                        Id = r.Id,
-                        Content = r.Content,
-                        CreatedAt = r.CreatedAt,
-                        UserId = r.UserId,
-                        UserName = r.User.UserName!,
-                        LikeCount = r.Likes.Count,
-                        ParentCommentId = r.ParentCommentId
-                    }).ToList()
-                }).ToListAsync();
+                .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
+                .ToListAsync();
 
             if (comments.Count() == 0)
             {
@@ -127,13 +107,8 @@ namespace Blog_API.Services.Implementation
         public async Task<CommentDTO?> GetCommentByIdAsync(Guid commentId)
         {
             var comment = await _context.comments
-                .Include(c => c.User)
-                .Include(l => l.Likes)
-                .Include(r => r.Replies)
-                    .ThenInclude(r => r.User)
-                .Include(r => r.Replies)
-                    .ThenInclude(u => u.Likes)
                 .AsNoTracking()
+                .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null)
@@ -141,33 +116,13 @@ namespace Blog_API.Services.Implementation
                 throw new KeyNotFoundException($"Comment with ID {commentId} not found.");
             }
 
-            var responseDTO = new CommentDTO
-            {
-                Id = comment.Id,
-                Content = comment.Content,
-                CreatedAt = comment.CreatedAt,
-                UserId = comment.UserId,
-                UserName = comment.User.UserName!,
-                LikeCount = comment.Likes.Count,
-                ParentCommentId = comment.ParentCommentId,
-                Replies = comment.Replies.Select(r => new CommentDTO
-                {
-                    Id = r.Id,
-                    Content = r.Content,
-                    CreatedAt = r.CreatedAt,
-                    UserId = r.UserId,
-                    UserName = r.User.UserName!,
-                    LikeCount = r.Likes.Count,
-                    ParentCommentId = r.ParentCommentId
-                }).ToList()
-            };
-
-            return responseDTO;
+            return comment;
         }
 
-        public async Task UpdateCommentAsync(Guid commentId, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId)
+        public async Task<CommentDTO> UpdateCommentAsync(Guid commentId, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId)
         {
-            var comment = await _context.comments.FirstOrDefaultAsync(c => c.Id == commentId);
+            var comment = await _context.comments
+                .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null)
             {
@@ -184,12 +139,16 @@ namespace Blog_API.Services.Implementation
                 Content = comment.Content
             };
 
-            patchDoc.ApplyTo(commentToPatch);
+            // Apply changes with processing error!
+            patchDoc.ApplyTo(commentToPatch, error =>
+            {
+                throw new ArgumentException(error.ErrorMessage);
+            });
 
             comment.Content = commentToPatch.Content;
 
             await _context.SaveChangesAsync();
-
+            return _mapper.Map<CommentDTO>(comment);
         }
     }
 }

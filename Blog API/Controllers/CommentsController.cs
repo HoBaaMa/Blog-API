@@ -93,10 +93,10 @@ namespace Blog_API.Controllers
             try
             {
                 var currentUser = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-                await _commentService.UpdateCommentAsync(id, patchDoc, currentUser);
+                var updatedComment = await _commentService.UpdateCommentAsync(id, patchDoc, currentUser);
 
                 _logger.LogInformation($"Comment with ID: {id} updated successfully.");
-                return NoContent();
+                return Ok(updatedComment);
             }
             catch (UnauthorizedAccessException ex)
             {
