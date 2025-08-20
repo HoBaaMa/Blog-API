@@ -1,15 +1,19 @@
-﻿namespace Blog_API.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Blog_API.Models
 {
     public class BlogPost
     {
         public Guid Id { get; set; }
-        public string Title { get; set; }
-        public string Content { get; set; }
+        public required string Title { get; set; } 
+        public required string Content { get; set; } 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public string UserId { get; set; }
-        public ApplicationUser User { get; set; }
+        public string UserId { get; set; } = default!;
+        public ApplicationUser? User { get; set; } 
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
         public ICollection<Like> Likes { get; set; } = new List<Like>();
+        public BlogCategory BlogCategory { get; set; }
+        public ICollection<Tag> Tags { get; set; } = new List<Tag>();
     }
 }

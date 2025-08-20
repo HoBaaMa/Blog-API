@@ -1,7 +1,4 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-
-namespace Blog_API.DTOs
+﻿namespace Blog_API.DTOs
 {
     public class TagDTO
     {

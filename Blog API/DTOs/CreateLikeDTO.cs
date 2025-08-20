@@ -4,6 +4,7 @@ namespace Blog_API.DTOs
 {
     public class CreateLikeDTO
     {
+        // TODO : Custome Validation
         public Guid? BlogPostId { get; set; }
         public Guid? CommentId { get; set; }
     }
