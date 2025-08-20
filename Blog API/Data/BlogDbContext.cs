@@ -13,6 +13,7 @@ namespace Blog_API.Data
         public DbSet<BlogPost> blogPosts { get; set; }
         public DbSet<Comment> comments { get; set; }
         public DbSet<Like> likes { get; set; }
+        public DbSet<Tag> tags { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -43,6 +44,9 @@ namespace Blog_API.Data
                 .WithMany(u => u.BlogPosts)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.Property(e => e.BlogCategory)
+                .HasConversion<string>();
 
             });
             modelBuilder.Entity<Comment>(e =>
@@ -96,6 +100,17 @@ namespace Blog_API.Data
                 l.HasIndex(e => new { e.UserId, e.BlogPostId }).IsUnique();
                 l.HasIndex(e => new { e.UserId, e.CommentId }).IsUnique();
 
+            });
+
+            modelBuilder.Entity<Tag>(t =>
+            {
+                t.HasKey(t => t.Id);
+
+                t.HasMany(t => t.BlogPosts)
+                .WithMany(t => t.Tags);
+
+                //t.Property(t => t.Name)
+                //.HasMaxLength(25);
             });
         }
     }
