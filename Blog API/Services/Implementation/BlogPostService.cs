@@ -48,7 +48,7 @@ namespace Blog_API.Services.Implementation
             var blogPost = await _context.blogPosts.FirstOrDefaultAsync(bp => bp.Id == id);
             if (blogPost?.UserId != currentUserId)
             {
-                throw new UnauthorizedAccessException("Access denied");
+                throw new UnauthorizedAccessException();
             }
             if (blogPost == null)
             {
@@ -114,7 +114,7 @@ namespace Blog_API.Services.Implementation
                 Content = blogPost.Content,
                 CreatedAt = blogPost.CreatedAt,
                 UserId = blogPost.UserId,
-                UserName = blogPost.User.UserName!,
+                UserName = blogPost.User!.UserName!,
                 LikeCount = blogPost.Likes.Count
             };
         }
@@ -143,15 +143,7 @@ namespace Blog_API.Services.Implementation
             {
                 throw new DatabaseOperationException("Failed to delete blog post", ex);
             }
-            return new BlogPostDTO
-            {
-                Id = blogPost.Id,
-                Title = blogPost.Title,
-                Content = blogPost.Content,
-                UserId = blogPost.UserId,
-                CreatedAt = blogPost.CreatedAt,
-                UserName = blogPost.User?.UserName ?? "Unknown User"
-            };
+
         }
     }
 }
