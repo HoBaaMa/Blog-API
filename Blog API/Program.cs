@@ -1,4 +1,5 @@
 using Blog_API.Data;
+using Blog_API.Middleware;
 using Blog_API.Models;
 using Blog_API.Services.Implementation;
 using Blog_API.Services.Interface;
@@ -57,11 +58,13 @@ builder.Host.UseSerilog((context, services, configuration) =>
 
 var app = builder.Build();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 
@@ -70,5 +73,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 
 app.Run();

@@ -15,125 +15,48 @@ namespace Blog_API.Controllers
         public BlogPostsController(IBlogPostService blogPostService, ILogger<BlogPostsController> logger)
         {
             _blogPostService = blogPostService ?? throw new ArgumentNullException(nameof(blogPostService));
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllBlogPosts()
         {
-            _logger.LogInformation("Fetching all blog posts.");
-            try
-            {
-                var blogPosts = await _blogPostService.GetAllBlogPostsAsync();
-                _logger.LogInformation($"Retrieved {blogPosts.Count()} blog posts.");
-                return Ok(blogPosts);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                _logger.LogError(ex, "No blog posts found.");
-                return NotFound("No blog posts found: " + ex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while fetching blog posts.");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
+            var blogPosts = await _blogPostService.GetAllBlogPostsAsync();
+            return Ok(blogPosts);
         }
 
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateBlogPost([FromBody] CreateBlogPostDTO blogPostDTO)
         {
-            _logger.LogInformation("Creating a new blog post.");
-            try
-            {
-                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, currentUserId);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, currentUserId);
 
-                _logger.LogInformation($"Blog post created successfully.");
-                return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
-            }
-
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while creating the blog post.");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
-
+            return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
         }
 
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetBlogPostById(Guid id)
         {
-            _logger.LogInformation($"Fetching blod post ID: {id}");
-            try
-            {
-                var blogPost = await _blogPostService.GetBlogPostByIdAsync(id);
-                _logger.LogInformation($"Blog post with ID: {id} retrieved successfully.");
-                return Ok(blogPost);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                _logger.LogWarning(ex, $"Blog post with ID: {id} not found.");
-                return NotFound(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error retrieving blog post with ID: {id}");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
+            var blogPost = await _blogPostService.GetBlogPostByIdAsync(id);
+            return Ok(blogPost);
         }
 
         [HttpPut("{id:guid}")]
         [Authorize]
         public async Task<IActionResult> UpdateBlogPost (Guid id,[FromBody] CreateBlogPostDTO blogPostDTO)
         {
-            _logger.LogInformation($"Updating blog post with ID: {id}.");
-            try
-            {
-                await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO);
-                _logger.LogInformation($"Blog post with ID: {id} updated successfully.");
-                return Ok("Blog post updated successfully.");
-            }
-            catch (KeyNotFoundException ex)
-            {
-                _logger.LogWarning(ex, $"Blog post with ID: {id} not found.");
-                return NotFound(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error updating blog post with ID: {id}.");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
+            var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO);
+            return Ok(updatedBlogPost);
         }
         [HttpDelete("{id:guid}")]
         [Authorize]
         public async Task<IActionResult> DeleteBlogPost (Guid id)
         {
-            _logger.LogInformation($"Deleting blog post with ID: {id}.");
-            try
-            {
-                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                await _blogPostService.DeleteBlogPostAsync(id, currentUserId);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            await _blogPostService.DeleteBlogPostAsync(id, currentUserId);
 
-                _logger.LogInformation($"Blog post with ID: {id} deleted successfully.");
-                return NoContent();
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.LogWarning(ex, $": Unauthorized access attempt to update blog post with ID: {id}.");
-                return Forbid();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                _logger.LogWarning(ex, $"Blog post with ID: {id} not found for deletion.");
-                return NotFound(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while deleting the blog post.");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
+            return NoContent();
         }
     }
 }

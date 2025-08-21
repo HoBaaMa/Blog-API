@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Blog_API.Data;
 using Blog_API.DTOs;
@@ -60,7 +60,7 @@ namespace Blog_API.Services.Implementation
             var blogPost = await _context.BlogPosts.FirstOrDefaultAsync(bp => bp.Id == id);
             if (blogPost?.UserId != currentUserId)
             {
-                throw new UnauthorizedAccessException("Access denied");
+                throw new UnauthorizedAccessException();
             }
             if (blogPost == null)
             {
@@ -138,7 +138,12 @@ namespace Blog_API.Services.Implementation
                 .Include(u => u.User)
                 .Include(t => t.Tags)
                 .FirstOrDefaultAsync(bp => bp.Id == id);
-
+                
+            if (blogPost?.UserId != currentUserId)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            
             if (blogPost == null)
             {
                 throw new KeyNotFoundException($"Blog post ID: {id} not found.");
