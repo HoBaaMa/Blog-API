@@ -132,18 +132,18 @@ namespace Blog_API.Services.Implementation
             return blogPost;
         }
         // TODO: LikeCount in the blogPost Query!
-        public async Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO)
+        public async Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO, string currentUserId)
         {
             var blogPost = await _context.BlogPosts
                 .Include(u => u.User)
                 .Include(t => t.Tags)
                 .FirstOrDefaultAsync(bp => bp.Id == id);
-                
+
             if (blogPost?.UserId != currentUserId)
             {
                 throw new UnauthorizedAccessException();
             }
-            
+
             if (blogPost == null)
             {
                 throw new KeyNotFoundException($"Blog post ID: {id} not found.");

@@ -46,7 +46,9 @@ namespace Blog_API.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateBlogPost (Guid id,[FromBody] CreateBlogPostDTO blogPostDTO)
         {
-            var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO, currentUserId);
+
             return Ok(updatedBlogPost);
         }
         [HttpDelete("{id:guid}")]

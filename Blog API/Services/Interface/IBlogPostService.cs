@@ -7,7 +7,7 @@ namespace Blog_API.Services.Interface
         Task<IReadOnlyCollection<BlogPostDTO>> GetAllBlogPostsAsync();
         Task<BlogPostDTO?> GetBlogPostByIdAsync(Guid id);
         Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO blogPostDTO, string userId);
-        Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO);
+        Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO, string currentUserId);
         Task DeleteBlogPostAsync(Guid id, string currentUserId);
     }
 }

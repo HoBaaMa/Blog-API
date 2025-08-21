@@ -12,7 +12,7 @@ namespace Blog_API.Services.Implementation
         }
         public string GetCurrentUserId()
         {
-            return _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
         }
     }
 }
