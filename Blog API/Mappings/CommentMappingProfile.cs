@@ -9,8 +9,8 @@ namespace Blog_API.MappingProfiles
         public CommentMappingProfile()
         {
             CreateMap<Comment, CommentDTO>()
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName))
-                .ForMember(dest => dest.Replies, opt => opt.MapFrom(src => src.Replies));
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User!.UserName))
+                .ForMember(dest => dest.LikeCount, opt => opt.MapFrom(src => src.Likes.Count));
         }
     }
 }

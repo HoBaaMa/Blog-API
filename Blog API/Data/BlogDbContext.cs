@@ -9,11 +9,11 @@ namespace Blog_API.Data
         public BlogDbContext(DbContextOptions<BlogDbContext> options) : base(options)
         {
         }
-        public DbSet<ApplicationUser> applicationUsers { get; set; }
-        public DbSet<BlogPost> blogPosts { get; set; }
-        public DbSet<Comment> comments { get; set; }
-        public DbSet<Like> likes { get; set; }
-        public DbSet<Tag> tags { get; set; }
+        public DbSet<ApplicationUser> ApplicationUsers { get; set; }
+        public DbSet<BlogPost> BlogPosts { get; set; }
+        public DbSet<Comment> Comments { get; set; }
+        public DbSet<Like> Likes { get; set; }
+        public DbSet<Tag> Tags { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
