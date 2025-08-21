@@ -55,6 +55,14 @@ namespace Blog_API.Services.Implementation
             }
         }
 
+        /// <summary>
+        /// Deletes a blog post by its identifier if the specified user is the owner.
+        /// </summary>
+        /// <param name="id">The identifier of the blog post to delete.</param>
+        /// <param name="currentUserId">The identifier of the user attempting the deletion; must match the post's owner.</param>
+        /// <exception cref="UnauthorizedAccessException">Thrown when the specified user does not own the blog post.</exception>
+        /// <exception cref="KeyNotFoundException">Thrown when no blog post exists with the given <paramref name="id"/>.</exception>
+        /// <exception cref="DatabaseOperationException">Thrown when the database delete operation fails (wraps <see cref="DbUpdateException"/>).</exception>
         public async Task DeleteBlogPostAsync(Guid id, string currentUserId)
         {
             var blogPost = await _context.BlogPosts.FirstOrDefaultAsync(bp => bp.Id == id);
@@ -131,7 +139,15 @@ namespace Blog_API.Services.Implementation
 
             return blogPost;
         }
-        // TODO: LikeCount in the blogPost Query!
+        /// <summary>
+        /// Updates an existing blog post with values from the provided DTO and returns the updated post as a DTO.
+        /// </summary>
+        /// <param name="id">The identifier of the blog post to update.</param>
+        /// <param name="blogPostDTO">The DTO containing updated blog post data (title, content, tags, etc.).</param>
+        /// <returns>The updated blog post mapped to <see cref="BlogPostDTO"/>.</returns>
+        /// <exception cref="UnauthorizedAccessException">Thrown when the requester does not own the blog post.</exception>
+        /// <exception cref="KeyNotFoundException">Thrown when no blog post with the specified <paramref name="id"/> exists.</exception>
+        /// <exception cref="DatabaseOperationException">Thrown when saving changes to the database fails.</exception>
         public async Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO)
         {
             var blogPost = await _context.BlogPosts
