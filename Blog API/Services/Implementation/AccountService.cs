@@ -7,12 +7,10 @@ namespace Blog_API.Services.Implementation
 {
     public class AccountService : IAccountService
     {
-        private readonly BlogDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         public AccountService(BlogDbContext context, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
         {
-            _context = context;  
             _userManager = userManager;
             _signInManager = signInManager;
         }

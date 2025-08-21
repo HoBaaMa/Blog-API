@@ -26,12 +26,13 @@ namespace Blog_API.Services.Implementation
             // Check if the comment id or blog post id is found or not and 
 
 
-            var existingLike = await _context.likes
+            var existingLike = await _context.Likes
                 .FirstOrDefaultAsync(l =>
-                    l.UserId == userId && (l.CommentId == likeDTO.CommentId || l.BlogPostId == likeDTO.BlogPostId));
+                    l.UserId == userId && (likeDTO.CommentId != null ? l.CommentId == likeDTO.CommentId : l.BlogPostId == likeDTO.BlogPostId));
+
             if (existingLike != null)
             {
-                _context.likes.Remove(existingLike);
+                _context.Likes.Remove(existingLike);
                 await _context.SaveChangesAsync();
                 return false;
             }
@@ -43,7 +44,7 @@ namespace Blog_API.Services.Implementation
                 CommentId = likeDTO.CommentId
             };
 
-            await _context.likes.AddAsync(like);
+            await _context.Likes.AddAsync(like);
             await _context.SaveChangesAsync();
 
             return true;

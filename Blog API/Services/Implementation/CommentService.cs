@@ -18,7 +18,7 @@ namespace Blog_API.Services.Implementation
         public CommentService(BlogDbContext context, IMapper mapper)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _mapper = mapper;
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
         
         public async Task<CommentDTO> CreateCommentAsync(CreateCommentDTO commentDTO, string userId)
@@ -39,13 +39,13 @@ namespace Blog_API.Services.Implementation
              */
             if (commentDTO.ParentCommentId.HasValue)
             {
-                bool parentExists = await _context.comments.AnyAsync(c => c.Id == commentDTO.ParentCommentId.Value && c.BlogPostId == commentDTO.BlogPostId);
+                bool parentExists = await _context.Comments.AnyAsync(c => c.Id == commentDTO.ParentCommentId.Value && c.BlogPostId == commentDTO.BlogPostId);
                 if (!parentExists)
                 {
                     throw new KeyNotFoundException($"Parent comment with ID: {commentDTO.ParentCommentId.Value} not found.");
                 }
             }
-            await _context.comments.AddAsync(comment);
+            await _context.Comments.AddAsync(comment);
             await _context.SaveChangesAsync();
 
 
@@ -54,13 +54,13 @@ namespace Blog_API.Services.Implementation
 
         public async Task DeleteCommentAsync(Guid commentId, string currentUserId)
         {
-            var isOwner = await _context.comments.AnyAsync(c => c.Id == commentId && c.UserId == currentUserId);
+            var isOwner = await _context.Comments.AnyAsync(c => c.Id == commentId && c.UserId == currentUserId);
             if (!isOwner)
             {
-                bool exists = await _context.comments.AnyAsync(c => c.Id == commentId);
-                throw exists ? new UnauthorizedAccessException("Access denied") : new KeyNotFoundException($"Comment ID: {commentId} not found.");
+                bool exists = await _context.Comments.AnyAsync(c => c.Id == commentId);
+                throw exists ? new UnauthorizedAccessException() : new KeyNotFoundException($"Comment ID: {commentId} not found.");
             }
-            _context.comments.Remove(new Comment { Id = commentId});
+            _context.Comments.Remove(new Comment { Id = commentId});
             try
             {
                 await _context.SaveChangesAsync();
@@ -76,37 +76,31 @@ namespace Blog_API.Services.Implementation
         {
             // blogPostId is not found exception
 
-            if (!await _context.blogPosts.AnyAsync(bp => bp.Id == blogPostId))
+            if (!await _context.BlogPosts.AnyAsync(bp => bp.Id == blogPostId))
             {
                 throw new KeyNotFoundException($"Blog Post with ID {blogPostId} not found.");
             }
 
-            // Use AsNoTracking for read-only queries to improve performance
-            //var comments = await _context.comments
-            //    .Where(c => c.BlogPostId == blogPostId)
-            //    .Include(c => c.Replies)
-            //        .ThenInclude(r => r.User)
-            //    .Include(c => c.Replies)
-            //        .ThenInclude(r => r.Likes)
-            //    .AsNoTracking()
-            //    .ToListAsync();
-
-            var comments = await _context.comments
+            var Comments = await _context.Comments
                 .AsNoTracking()
+                .Where(c => c.BlogPostId == blogPostId && c.ParentCommentId == null)
+                .Include(u => u.User)
+                .Include(r => r.Replies)
+                    .ThenInclude(u => u.User)
                 .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
                 .ToListAsync();
 
-            if (comments.Count() == 0)
+            if (Comments.Count() == 0)
             {
-                throw new KeyNotFoundException($"No comments found for Blog Post ID {blogPostId}.");
+                throw new KeyNotFoundException($"No Comments found for Blog Post ID {blogPostId}.");
             }
 
-            return comments;
+            return Comments;
         }
 
         public async Task<CommentDTO?> GetCommentByIdAsync(Guid commentId)
         {
-            var comment = await _context.comments
+            var comment = await _context.Comments
                 .AsNoTracking()
                 .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
@@ -121,7 +115,8 @@ namespace Blog_API.Services.Implementation
 
         public async Task<CommentDTO> UpdateCommentAsync(Guid commentId, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId)
         {
-            var comment = await _context.comments
+            var comment = await _context.Comments
+                .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(c => c.Id == commentId);
 
             if (comment == null)
@@ -131,7 +126,7 @@ namespace Blog_API.Services.Implementation
 
             if (comment.UserId != currentUserId)
             {
-                throw new UnauthorizedAccessException("Access denied");
+                throw new UnauthorizedAccessException();
             }
 
             var commentToPatch = new UpdateCommentDTO
@@ -142,7 +137,7 @@ namespace Blog_API.Services.Implementation
             // Apply changes with processing error!
             patchDoc.ApplyTo(commentToPatch, error =>
             {
-                throw new ArgumentException(error.ErrorMessage);
+                throw new ArgumentException();
             });
 
             comment.Content = commentToPatch.Content;

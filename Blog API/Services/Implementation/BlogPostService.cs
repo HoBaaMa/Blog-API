@@ -1,4 +1,6 @@
-﻿using Blog_API.Data;
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Blog_API.Data;
 using Blog_API.DTOs;
 using Blog_API.Exceptions;
 using Blog_API.Models;
@@ -10,42 +12,52 @@ namespace Blog_API.Services.Implementation
     public class BlogPostService : IBlogPostService
     {
         private readonly BlogDbContext _context;
-        public BlogPostService(BlogDbContext context)
+        private readonly IMapper _mapper;
+        public BlogPostService(BlogDbContext context, IMapper mapper)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
-        public async Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO blogPostDTO, string userId)
+        public async Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO createBlogPostDTO, string userId)
         {
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstAsync(u => u.Id == userId);
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            var blogPost = new BlogPost
+            try
             {
-                Title = blogPostDTO.Title,
-                Content = blogPostDTO.Content,
-                User = user,
-                UserId = userId
-            };
+                var blogPost = _mapper.Map<BlogPost>(createBlogPostDTO);
+                blogPost.UserId = userId;
 
-            await _context.blogPosts.AddAsync(blogPost);
-            await _context.SaveChangesAsync();
+                // Handle tags
+                if (createBlogPostDTO.Tags.Any())
+                {
+                    blogPost.Tags = await ProcessTagsAsync(createBlogPostDTO.Tags);
+                }
 
-            return new BlogPostDTO
+                _context.BlogPosts.Add(blogPost);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                // Return the created blog post with all related data
+                var createdBlogPost = await _context.BlogPosts
+                    .Include(bp => bp.User)
+                    .Include(bp => bp.Tags)
+                    .Include(bp => bp.Likes)
+                    .FirstAsync(bp => bp.Id == blogPost.Id);
+
+                return _mapper.Map<BlogPostDTO>(createdBlogPost);
+            }
+            catch
             {
-                Id = blogPost.Id,
-                Title = blogPost.Title,
-                Content = blogPost.Content,
-                UserId = userId,
-                CreatedAt = blogPost.CreatedAt,
-                UserName = user.UserName!
-            };
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task DeleteBlogPostAsync(Guid id, string currentUserId)
         {
-            var blogPost = await _context.blogPosts.FirstOrDefaultAsync(bp => bp.Id == id);
+            var blogPost = await _context.BlogPosts.FirstOrDefaultAsync(bp => bp.Id == id);
             if (blogPost?.UserId != currentUserId)
             {
                 throw new UnauthorizedAccessException();
@@ -55,7 +67,7 @@ namespace Blog_API.Services.Implementation
                 throw new KeyNotFoundException($"Blog Post ID: {id} not found.");
             }
 
-            _context.blogPosts.Remove(blogPost);
+            _context.BlogPosts.Remove(blogPost);
 
             try
             {
@@ -69,37 +81,47 @@ namespace Blog_API.Services.Implementation
 
         public async Task<IReadOnlyCollection<BlogPostDTO>> GetAllBlogPostsAsync()
         {
-            var blogPosts = await _context.blogPosts
-                .Include(bp => bp.User)
-                .Include(bp => bp.Comments)
-                .Include(bp => bp.Likes)
+            //var blogPosts = await _context.BlogPosts
+            //.AsNoTracking()
+            //.Include(bp => bp.User)
+            //.Include(bp => bp.Likes)
+            //.Include(bp => bp.Comments
+            //    .Where(c => c.ParentCommentId == null)) // Only top-level comments
+            //    .ThenInclude(c => c.User)
+            //.Include(bp => bp.Comments
+            //    .Where(c => c.ParentCommentId == null))
+            //    .ThenInclude(c => c.Replies)
+            //    .ThenInclude(r => r.User)
+            //.ToListAsync();
+
+            var blogPosts = await _context.BlogPosts
                 .AsNoTracking()
+                .Include(c => c.Comments
+                    .Where(c => c.ParentCommentId == null))
+                    .ThenInclude(c => c.Replies)
+                    .ThenInclude(u => u.User)
+                .ProjectTo<BlogPostDTO>(_mapper.ConfigurationProvider)
                 .ToListAsync();
+
 
             if (blogPosts.Count == 0)
             {
-                throw new KeyNotFoundException("Blog posts is empty.");
+                throw new KeyNotFoundException("Blog posts is   empty.");
             }
-            var blogPostsDTOs = blogPosts.Select(bp => new BlogPostDTO
-            {
-                Id = bp.Id,
-                Title = bp.Title,
-                Content = bp.Content,
-                CreatedAt = bp.CreatedAt,
-                UserId = bp.UserId,
-                UserName = bp.User?.UserName!,
-                LikeCount = bp.Likes.Count
-            }).ToList();
 
-            return blogPostsDTOs;
+            return blogPosts;
+            //return _mapper.Map<IReadOnlyCollection<BlogPostDTO>>(blogPosts);
         }
 
         public async Task<BlogPostDTO?> GetBlogPostByIdAsync(Guid id)
         {
-            var blogPost = await _context.blogPosts
-                .Include(bp => bp.User)
-                .Include(bp => bp.Comments)
-                .Include(bp => bp.Likes)
+            var blogPost = await _context.BlogPosts
+                .AsNoTracking()
+                .Include(bp => bp.Comments
+                    .Where(c => c.ParentCommentId == null))
+                    .ThenInclude(c => c.Replies)
+                    .ThenInclude(r => r.User)
+                .ProjectTo<BlogPostDTO>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(bp => bp.Id == id);
 
             if (blogPost == null)
@@ -107,31 +129,34 @@ namespace Blog_API.Services.Implementation
                 throw new KeyNotFoundException($"Blog post ID: {id} not found.");
             }
 
-            return new BlogPostDTO
-            {
-                Id = blogPost.Id,
-                Title = blogPost.Title,
-                Content = blogPost.Content,
-                CreatedAt = blogPost.CreatedAt,
-                UserId = blogPost.UserId,
-                UserName = blogPost.User!.UserName!,
-                LikeCount = blogPost.Likes.Count
-            };
+            return blogPost;
         }
-
+        // TODO: LikeCount in the blogPost Query!
         public async Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO)
         {
-            var blogPost = await _context.blogPosts
+            var blogPost = await _context.BlogPosts
+                .Include(u => u.User)
+                .Include(t => t.Tags)
                 .FirstOrDefaultAsync(bp => bp.Id == id);
-
+                
+            if (blogPost?.UserId != currentUserId)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            
             if (blogPost == null)
             {
                 throw new KeyNotFoundException($"Blog post ID: {id} not found.");
             }
 
-            blogPost.Title = blogPostDTO.Title;
-            blogPost.Content = blogPostDTO.Content;
-            blogPost.UpdatedAt = DateTime.UtcNow;
+            if (blogPostDTO.Tags.Any())
+            {
+                var updatedTags = await ProcessTagsAsync(blogPostDTO.Tags);
+                blogPost.Tags = updatedTags;
+            }
+
+            _mapper.Map(blogPostDTO, blogPost);
+            blogPost.UpdatedAt = DateTime.Now;
 
             
             _context.Entry(blogPost).State = EntityState.Modified;
@@ -143,7 +168,44 @@ namespace Blog_API.Services.Implementation
             {
                 throw new DatabaseOperationException("Failed to delete blog post", ex);
             }
-
+            return _mapper.Map<BlogPostDTO>(blogPost);
         }
+        // PUT THIS METHOD HERE - as a private helper method
+        private async Task<ICollection<Tag>> ProcessTagsAsync(ICollection<string> tagNames)
+        {
+            // Clean and normalize tag names
+            var normalizedTagNames = tagNames
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t.Trim().ToUpperInvariant())
+                .Distinct()
+                .ToList();
+
+            if (!normalizedTagNames.Any())
+                return new List<Tag>();
+
+            var processedTags = new List<Tag>();
+
+            // Check each tag individually
+            foreach (var tagName in normalizedTagNames)
+            {
+                var existingTag = await _context.Tags
+                    .FirstOrDefaultAsync(t => t.Name.ToUpper() == tagName);
+
+                if (existingTag != null)
+                {
+                    processedTags.Add(existingTag);
+                }
+                else
+                {
+                    // Create new tag
+                    var newTag = new Tag { Id = Guid.NewGuid(), Name = tagName };
+                    _context.Tags.Add(newTag);
+                    processedTags.Add(newTag);
+                }
+            }
+
+            return processedTags;
+        }
+
     }
 }
