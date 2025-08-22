@@ -1,42 +1,22 @@
-using Blog_API.Data;
+using Blog_API.Configurations;
 using Blog_API.Middleware;
-using Blog_API.Models.Entities;
-using Blog_API.Repositories.Implementations;
-using Blog_API.Repositories.Interfaces;
-using Blog_API.Services.Implementation;
-using Blog_API.Services.Interface;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseConfiguredSerilog();
 
 // Services
 builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<BlogDbContext>(o => 
-    o.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-builder.Services.AddScoped<IBlogPostService, BlogPostService>();
-builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddScoped<ICommentService, CommentService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ILikeService, LikeService>();
-builder.Services.AddScoped<IBlogPostRepository, BlogPostRepository>();
-//builder.Services.AddHttpContextAccessor();
-
 builder.Services
-    .AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<BlogDbContext>()
-    .AddDefaultTokenProviders();
-
-
-// Register AutoMapper (scans the assembly for Profile)
+    .AddDatabase(builder.Configuration)
+    .AddIdentityServices()
+    .AddApplicationServices()
+    .AddRepositories()
+    .AddAutoMapper(typeof(Program).Assembly); // Register AutoMapper (scans the assembly for Profile)
 // This scans the assembly containing Program class for any classes inheriting Profile 
-// and registers them automatically.
-builder.Services.AddAutoMapper(typeof(Program).Assembly);
+// and registers them automatic
 
 // Prevent redirects on 401/403 for API
 builder.Services.ConfigureApplicationCookie(options =>
@@ -53,14 +33,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
-builder.Host.UseSerilog((context, services, configuration) =>
-{
-    configuration.ReadFrom.Configuration(context.Configuration);
-    configuration.ReadFrom.Services(services);
-});
-
 var app = builder.Build();
-
 
 if (app.Environment.IsDevelopment())
 {
