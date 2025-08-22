@@ -1,11 +1,5 @@
-﻿using Blog_API.Data;
-using Blog_API.Models.Entities;
-using Blog_API.Repositories.Implementations;
-using Blog_API.Repositories.Interfaces;
-using Blog_API.Services.Implementation;
+﻿using Blog_API.Services.Implementation;
 using Blog_API.Services.Interface;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace Blog_API.Configurations
 {
