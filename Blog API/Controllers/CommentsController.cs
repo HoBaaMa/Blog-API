@@ -1,4 +1,4 @@
-﻿using Blog_API.DTOs;
+﻿using Blog_API.Models.DTOs;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;

@@ -1,4 +1,4 @@
-﻿using Blog_API.DTOs;
+﻿using Blog_API.Models.DTOs;
 
 namespace Blog_API.Services.Interface
 {

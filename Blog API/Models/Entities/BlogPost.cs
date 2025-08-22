@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Blog_API.Models
+namespace Blog_API.Models.Entities
 {
     public class BlogPost
     {

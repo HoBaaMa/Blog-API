@@ -1,4 +1,4 @@
-﻿namespace Blog_API.Models
+﻿namespace Blog_API.Models.Entities
 {
     public class Like
     {

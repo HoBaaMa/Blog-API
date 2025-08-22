@@ -1,7 +1,7 @@
-﻿using Blog_API.Models;
+﻿using Blog_API.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 
-namespace Blog_API.DTOs
+namespace Blog_API.Models.DTOs
 {
     public class CreateBlogPostDTO
     {

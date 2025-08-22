@@ -1,5 +1,4 @@
-﻿using Blog_API.DTOs;
-using Blog_API.Models;
+﻿using Blog_API.Models.DTOs;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +20,7 @@ namespace Blog_API.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> CreareLike([FromBody] CreateLikeDTO createLikeDTO)
+        public async Task<IActionResult> ToggleLike([FromBody] CreateLikeDTO createLikeDTO)
         {
             try
             {

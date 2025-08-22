@@ -1,6 +1,5 @@
 ﻿using Blog_API.Data;
-using Blog_API.DTOs;
-using Blog_API.Models;
+using Blog_API.Models.Entities;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Blog_API.Exceptions;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Blog_API.Models.DTOs;
 
 namespace Blog_API.Services.Implementation
 {

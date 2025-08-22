@@ -1,6 +1,6 @@
 ﻿using Blog_API.Data;
-using Blog_API.DTOs;
-using Blog_API.Models;
+using Blog_API.Models.Entities;
+using Blog_API.Models.DTOs;
 using Blog_API.Services.Interface;
 using Microsoft.EntityFrameworkCore;
 

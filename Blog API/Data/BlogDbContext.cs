@@ -1,6 +1,6 @@
-﻿using Blog_API.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Blog_API.Models.Entities;
 
 namespace Blog_API.Data
 {

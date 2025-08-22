@@ -1,4 +1,4 @@
-﻿namespace Blog_API.DTOs
+﻿namespace Blog_API.Models.DTOs
 {
     public class TagDTO
     {

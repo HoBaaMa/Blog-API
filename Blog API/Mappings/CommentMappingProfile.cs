@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
-using Blog_API.DTOs;
-using Blog_API.Models;
+using Blog_API.Models.DTOs;
+using Blog_API.Models.Entities;
 
 namespace Blog_API.MappingProfiles
 {

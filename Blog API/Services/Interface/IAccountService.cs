@@ -1,4 +1,4 @@
-﻿using Blog_API.Models;
+﻿using Blog_API.Models.Entities;
 
 namespace Blog_API.Services.Interface
 {
