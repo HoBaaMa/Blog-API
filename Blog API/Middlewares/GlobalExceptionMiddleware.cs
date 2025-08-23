@@ -1,4 +1,4 @@
-﻿namespace Blog_API.Middleware
+﻿namespace Blog_API.Middlewares
 {
     public class GlobalExceptionMiddleware
     {

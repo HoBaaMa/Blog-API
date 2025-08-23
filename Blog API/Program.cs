@@ -1,5 +1,5 @@
 using Blog_API.Configurations;
-using Blog_API.Middleware;
+using Blog_API.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseConfiguredSerilog();

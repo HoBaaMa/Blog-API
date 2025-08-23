@@ -60,5 +60,34 @@ namespace Blog_API.Controllers
 
             return NoContent();
         }
+
+        /// <summary>
+        /// Retrieves blog posts by category without pagination
+        /// </summary>
+        /// <param name="blogCategory">The blog category to filter by</param>
+        /// <returns>Collection of blog posts in the specified category</returns>
+        [HttpGet("blogCategory")]
+        public async Task<IActionResult> GetBlogPostsByCategory(Models.Entities.BlogCategory blogCategory)
+        {
+            var blogPosts = await _blogPostService.GetBlogPostsByCategoryAsync(blogCategory);
+
+            return Ok(blogPosts);
+        }
+
+        /// <summary>
+        /// Retrieves paginated blog posts by category
+        /// </summary>
+        /// <param name="blogCategory">The blog category to filter by</param>
+        /// <param name="paginationRequest">Pagination parameters including page number and page size</param>
+        /// <returns>Paginated result containing blog posts and pagination metadata</returns>
+        [HttpGet("blogCategory/paged")]
+        public async Task<IActionResult> GetBlogPostsByCategoryPaged(
+            [FromQuery] Models.Entities.BlogCategory blogCategory,
+            [FromQuery] PaginationRequest paginationRequest)
+        {
+            var pagedResult = await _blogPostService.GetBlogPostsByCategoryPagedAsync(blogCategory, paginationRequest);
+
+            return Ok(pagedResult);
+        }
     }
 }

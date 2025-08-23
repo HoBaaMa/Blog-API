@@ -99,6 +99,28 @@ namespace Blog_API.Services.Implementation
             return _mapper.Map<BlogPostDTO>(blogPost);
         }
 
+        public async Task<IReadOnlyCollection<BlogPostDTO>> GetBlogPostsByCategoryAsync(BlogCategory blogCategory)
+        {
+            var blogPosts = await _blogPostRepository.GetBlogPostsByCategoryAsync(blogCategory);
+
+            return _mapper.Map<IReadOnlyCollection<BlogPostDTO>>(blogPosts);
+        }
+
+        public async Task<PagedResult<BlogPostDTO>> GetBlogPostsByCategoryPagedAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
+        {
+            var (blogPosts, totalCount) = await _blogPostRepository.GetBlogPostsByCategoryPagedAsync(blogCategory, paginationRequest);
+
+            var blogPostDTOs = _mapper.Map<IReadOnlyCollection<BlogPostDTO>>(blogPosts);
+
+            return new PagedResult<BlogPostDTO>
+            {
+                Data = blogPostDTOs,
+                TotalCount = totalCount,
+                PageNumber = paginationRequest.PageNumber,
+                PageSize = paginationRequest.PageSize
+            };
+        }
+
         public async Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO, string currentUserId)
         {
             // 1. Get existing blog post
