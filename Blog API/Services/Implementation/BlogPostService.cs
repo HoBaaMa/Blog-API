@@ -36,7 +36,7 @@ namespace Blog_API.Services.Implementation
 
             // Get the created blog post with all related data
             var createdBlogPost = await _blogPostRepository.GetByIdAsync(blogPost.Id);
-            return _mapper.Map<BlogPostDTO>(createdBlogPost!);
+            return _mapper.Map<BlogPostDTO>(createdBlogPost);
         }
 
         public async Task DeleteBlogPostAsync(Guid id, string currentUserId)
@@ -90,7 +90,7 @@ namespace Blog_API.Services.Implementation
 
             // 2. Authorization check
             if (existingBlogPost.UserId != currentUserId)
-                throw new UnauthorizedAccessException("You are not allowed to update this blog post.");
+                throw new UnauthorizedAccessException();
 
             // 3. Update basic properties manually to avoid AutoMapper conflicts
             existingBlogPost.Title = blogPostDTO.Title;

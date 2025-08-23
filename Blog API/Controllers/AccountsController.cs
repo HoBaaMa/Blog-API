@@ -9,11 +9,11 @@ namespace Blog_API.Controllers
     [ApiController]
     public class AccountsController : ControllerBase
     {
-        private readonly IAccountService _accountService;
+        private readonly IAuthService _authService;
         private readonly ILogger<AccountsController> _logger;
-        public AccountsController(IAccountService accountService, ILogger<AccountsController> logger)
+        public AccountsController(IAuthService authService, ILogger<AccountsController> logger)
         {
-            _accountService = accountService;
+            _authService = authService;
             _logger = logger;
         }
 
@@ -28,7 +28,7 @@ namespace Blog_API.Controllers
             }
             try
             {
-                var result = await _accountService.RegisterAsync(register);
+                var result = await _authService.RegisterAsync(register);
                 if (result) 
                 
                 {
@@ -59,7 +59,7 @@ namespace Blog_API.Controllers
             }
             try
             {
-                var result = await _accountService.LoginAsync(login);
+                var result = await _authService.LoginAsync(login);
                 if (!result)
                 {
                     _logger.LogWarning("Login failed. Invalid credentials.");
@@ -82,7 +82,7 @@ namespace Blog_API.Controllers
             _logger.LogInformation("Attempting to log out a user.");
             try
             {
-                await _accountService.LogoutAsync();
+                await _authService.LogoutAsync();
                 _logger.LogInformation("User logout successful.");
                 return Ok("Logout successful.");
             }

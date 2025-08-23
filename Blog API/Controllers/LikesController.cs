@@ -24,28 +24,28 @@ namespace Blog_API.Controllers
         {
             try
             {
-                var user = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                bool likeResult = await _likeService.ToggleLikeAsync(createLikeDTO, user);
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                bool likeResult = await _likeService.ToggleLikeAsync(userId, createLikeDTO.BlogPostId, createLikeDTO.CommentId);
                 if (likeResult)
                 {
                     if (createLikeDTO.BlogPostId.HasValue)
                     {
-                        _logger.LogInformation($"User ID {user} liked blog post ID: {createLikeDTO.BlogPostId}.");
+                        _logger.LogInformation($"User ID {userId} liked blog post ID: {createLikeDTO.BlogPostId}.");
                     }
                     else
                     {
-                        _logger.LogInformation($"User ID {user} liked comment ID: {createLikeDTO.CommentId}.");
+                        _logger.LogInformation($"User ID {userId} liked comment ID: {createLikeDTO.CommentId}.");
                     }
                 }
                 else
                 {
                     if (createLikeDTO.BlogPostId.HasValue)
                     {
-                        _logger.LogInformation($"User ID {user} unliked blog post ID: {createLikeDTO.BlogPostId}.");
+                        _logger.LogInformation($"User ID {userId} unliked blog post ID: {createLikeDTO.BlogPostId}.");
                     }
                     else
                     {
-                        _logger.LogInformation($"User ID {user} unliked comment ID: {createLikeDTO.CommentId}.");
+                        _logger.LogInformation($"User ID {userId} unliked comment ID: {createLikeDTO.CommentId}.");
                     }
                 }
 
@@ -61,6 +61,19 @@ namespace Blog_API.Controllers
                 _logger.LogError(ex, "Error creating like.");
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
+        }
+        [HttpGet("blogpost")]
+        public async Task<IActionResult> GetAllLikesByBlogPostId(Guid blogPostId)
+        {
+            var likes = await _likeService.GetAllLikesByBlogPostIdAsync(blogPostId);
+            return Ok(likes);
+        }
+
+        [HttpGet("comment")]
+        public async Task<IActionResult> GetAllLikesByCommentId(Guid commentId)
+        {
+            var likes = await _likeService.GetAllLikesByCommentIdAsync(commentId);
+            return Ok(likes);
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using AutoMapper.QueryableExtensions;
-using Blog_API.Data;
-using Blog_API.Models.DTOs;
+﻿using Blog_API.Data;
 using Blog_API.Models.Entities;
 using Blog_API.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +32,9 @@ namespace Blog_API.Repositories.Implementations
                 .Include(bp => bp.Likes)
                 .Include(c => c.Comments.Where(c => c.ParentCommentId == null))
                     .ThenInclude(c => c.User)
+                .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
+                    .ThenInclude(c => c.Likes)
+                    .ThenInclude(l => l.User)
                 .Include(c => c.Comments
                     .Where(c => c.ParentCommentId == null))
                     .ThenInclude(c => c.Replies)

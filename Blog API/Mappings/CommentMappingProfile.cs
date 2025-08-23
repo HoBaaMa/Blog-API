@@ -11,6 +11,9 @@ namespace Blog_API.MappingProfiles
             CreateMap<Comment, CommentDTO>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User!.UserName))
                 .ForMember(dest => dest.LikeCount, opt => opt.MapFrom(src => src.Likes.Count));
+
+            CreateMap<CreateCommentDTO, Comment>();
         }
+
     }
 }
