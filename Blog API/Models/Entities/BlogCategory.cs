@@ -14,6 +14,7 @@
         Sports,
         Finance,
         News,
-        Opinion
+        Opinion,
+        Other
     }
 }

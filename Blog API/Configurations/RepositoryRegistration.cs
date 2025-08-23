@@ -10,6 +10,7 @@ namespace Blog_API.Configurations
             services.AddScoped<IBlogPostRepository, BlogPostRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
             services.AddScoped<ILikeRepository, LikeRepository>();
+            services.AddScoped<ITagRepository, TagRepository>();
             return services;
         }
     }

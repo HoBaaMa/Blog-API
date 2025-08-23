@@ -9,12 +9,14 @@ namespace Blog_API.Services.Implementation
     public class BlogPostService : IBlogPostService
     {
         private readonly IBlogPostRepository _blogPostRepository;
+        private readonly ITagRepository _tagRepository;
         private readonly IMapper _mapper;
         
-        public BlogPostService(IMapper mapper, IBlogPostRepository blogPostRepository)
+        public BlogPostService(IMapper mapper, IBlogPostRepository blogPostRepository, ITagRepository tagRepository)
         {
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _blogPostRepository = blogPostRepository ?? throw new ArgumentNullException(nameof(blogPostRepository));
+            _tagRepository = tagRepository ?? throw new ArgumentNullException(nameof(tagRepository));
         }
 
         public async Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO createBlogPostDTO, string userId)
@@ -22,15 +24,32 @@ namespace Blog_API.Services.Implementation
             var blogPost = _mapper.Map<BlogPost>(createBlogPostDTO);
             blogPost.UserId = userId;
 
-            // Handle tags - for now, we'll create simple tags without checking duplicates
-            // In a proper implementation, you'd have a tag repository
+            // Handle tags - create or find existing tags and associate them with the blog 
+
             if (createBlogPostDTO.Tags?.Any() == true)
             {
-                blogPost.Tags = createBlogPostDTO.Tags
-                    .Where(t => !string.IsNullOrWhiteSpace(t))
-                    .Select(t => new Tag { Name = t.Trim() })
-                    .ToList();
+                var tagsToAssociate = new List<Tag>();
+                foreach (var tagName in createBlogPostDTO.Tags)
+                {
+                    var tag = await _tagRepository.GetTagByNameAsync(tagName);
+                    
+                    if (tag == null)
+                    {
+                        tag = new Tag { Id = Guid.NewGuid(), Name = tagName };
+                        await _tagRepository.AddAsync(tag);
+                    }
+                    tagsToAssociate.Add(tag);
+                }
+                blogPost.Tags = tagsToAssociate;
             }
+
+            //if (createBlogPostDTO.Tags?.Any() == true)
+            //{
+            //    blogPost.Tags = createBlogPostDTO.Tags
+            //        .Where(t => !string.IsNullOrWhiteSpace(t))
+            //        .Select(t => new Tag { Name = t.Trim() })
+            //        .ToList();
+            //}
 
             await _blogPostRepository.AddAsync(blogPost);
 
@@ -100,17 +119,21 @@ namespace Blog_API.Services.Implementation
 
             // 4. Handle tags
             existingBlogPost.Tags.Clear(); // Clear existing tags
+
             if (blogPostDTO.Tags?.Any() == true)
             {
-                var newTags = blogPostDTO.Tags
-                    .Where(t => !string.IsNullOrWhiteSpace(t))
-                    .Select(t => new Tag { Name = t.Trim().ToUpper() })
-                    .ToList();
-                
-                foreach (var tag in newTags)
+                var tagsToAssociate = new List<Tag>();
+                foreach (var tagName in blogPostDTO.Tags)
                 {
-                    existingBlogPost.Tags.Add(tag);
+                    var tag = await _tagRepository.GetTagByNameAsync(tagName);
+                    if (tag == null)
+                    {
+                        tag = new Tag { Id = Guid.NewGuid(), Name = tagName };
+                        await _tagRepository.AddAsync(tag);
+                    }
+                    tagsToAssociate.Add(tag);
                 }
+                existingBlogPost.Tags = tagsToAssociate;
             }
 
             // 5. Save via repository

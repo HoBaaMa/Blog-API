@@ -64,7 +64,6 @@ namespace Blog_API.Services.Implementation
             await _commentRepository.DeleteAsync(comment); 
         }
 
-        // TODO: Reply User is null
         public async Task<IReadOnlyCollection<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId)
         {
             if (await _blogPostRepository.GetByIdAsync(blogPostId) == null)

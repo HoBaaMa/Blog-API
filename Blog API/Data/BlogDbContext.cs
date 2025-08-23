@@ -110,7 +110,8 @@ namespace Blog_API.Data
                 .WithMany(t => t.Tags);
 
                 //t.Property(t => t.Name)
-                //.HasMaxLength(25);
+                //.HasMaxLength(25)
+                //.IsRequired();
             });
         }
     }

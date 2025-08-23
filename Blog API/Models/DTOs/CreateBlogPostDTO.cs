@@ -14,8 +14,9 @@ namespace Blog_API.Models.DTOs
         public required string Content { get; set; }
 
         [Required(ErrorMessage = "Category is required.")]
-        // TODO : Custom Validation on blog category
+        [Range(0, 13,  ErrorMessage ="Invalid input, please choose a number between {1} and {2}.")]
         public BlogCategory BlogCategory { get; set; }
+        [MaxLength(5, ErrorMessage = "Max tags per blog post is {1}.")]
         public ICollection<string> Tags { get; set; } = new List<string>();
     }
 }

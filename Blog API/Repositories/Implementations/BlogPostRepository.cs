@@ -30,6 +30,7 @@ namespace Blog_API.Repositories.Implementations
                 .AsNoTracking()
                 .Include(bp => bp.User)
                 .Include(bp => bp.Likes)
+                .Include(bp => bp.Tags) // Include tags for many-to-many relationship
                 .Include(c => c.Comments.Where(c => c.ParentCommentId == null))
                     .ThenInclude(c => c.User)
                 .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
@@ -46,6 +47,7 @@ namespace Blog_API.Repositories.Implementations
             await _context.BlogPosts
                 .Include(bp => bp.User)
                 .Include(bp => bp.Likes)
+                .Include(bp => bp.Tags) // Include tags for many-to-many relationship
                 .Include(c => c.Comments.Where(c=> c.ParentCommentId == null))
                     .ThenInclude(c => c.User)
                 .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
