@@ -12,6 +12,7 @@ namespace Blog_API.Controllers
     {
         private readonly IBlogPostService _blogPostService;
         private readonly ILogger<BlogPostsController> _logger;
+        
         public BlogPostsController(IBlogPostService blogPostService, ILogger<BlogPostsController> logger)
         {
             _blogPostService = blogPostService ?? throw new ArgumentNullException(nameof(blogPostService));
@@ -21,6 +22,7 @@ namespace Blog_API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllBlogPosts()
         {
+            _logger.LogInformation("API request to get all blog posts");
             var blogPosts = await _blogPostService.GetAllBlogPostsAsync();
             return Ok(blogPosts);
         }
@@ -30,34 +32,40 @@ namespace Blog_API.Controllers
         public async Task<IActionResult> CreateBlogPost([FromBody] CreateBlogPostDTO blogPostDTO)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, currentUserId);
+            _logger.LogInformation("API request to create blog post by user {UserId}", currentUserId);
 
+            var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, currentUserId);
             return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
         }
 
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetBlogPostById(Guid id)
         {
+            _logger.LogInformation("API request to get blog post {BlogPostId}", id);
             var blogPost = await _blogPostService.GetBlogPostByIdAsync(id);
             return Ok(blogPost);
         }
 
         [HttpPut("{id:guid}")]
         [Authorize]
-        public async Task<IActionResult> UpdateBlogPost (Guid id,[FromBody] CreateBlogPostDTO blogPostDTO)
+        public async Task<IActionResult> UpdateBlogPost(Guid id, [FromBody] CreateBlogPostDTO blogPostDTO)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO, currentUserId);
+            _logger.LogInformation("API request to update blog post {BlogPostId} by user {UserId}", id, currentUserId);
+            
 
+            var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO, currentUserId);
             return Ok(updatedBlogPost);
         }
+
         [HttpDelete("{id:guid}")]
         [Authorize]
-        public async Task<IActionResult> DeleteBlogPost (Guid id)
+        public async Task<IActionResult> DeleteBlogPost(Guid id)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            _logger.LogInformation("API request to delete blog post {BlogPostId} by user {UserId}", id, currentUserId);
+            
             await _blogPostService.DeleteBlogPostAsync(id, currentUserId);
-
             return NoContent();
         }
 
@@ -69,8 +77,8 @@ namespace Blog_API.Controllers
         [HttpGet("blogCategory")]
         public async Task<IActionResult> GetBlogPostsByCategory(Models.Entities.BlogCategory blogCategory)
         {
+            _logger.LogInformation("API request to get blog posts by category {BlogCategory}", blogCategory);
             var blogPosts = await _blogPostService.GetBlogPostsByCategoryAsync(blogCategory);
-
             return Ok(blogPosts);
         }
 
@@ -85,8 +93,10 @@ namespace Blog_API.Controllers
             [FromQuery] Models.Entities.BlogCategory blogCategory,
             [FromQuery] PaginationRequest paginationRequest)
         {
-            var pagedResult = await _blogPostService.GetBlogPostsByCategoryPagedAsync(blogCategory, paginationRequest);
+            _logger.LogInformation("API request to get paginated blog posts by category {BlogCategory}", blogCategory);
+            
 
+            var pagedResult = await _blogPostService.GetBlogPostsByCategoryPagedAsync(blogCategory, paginationRequest);
             return Ok(pagedResult);
         }
     }

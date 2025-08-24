@@ -90,6 +90,9 @@ namespace Blog_API.Repositories.Implementations
                 .Include(c => c.Comments.Where(c=> c.ParentCommentId == null))
                     .ThenInclude(c => c.User)
                 .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
+                    .ThenInclude(c => c.Likes)
+                    .ThenInclude(r => r.User)
+                .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
                     .ThenInclude(c => c.Replies)
                     .ThenInclude(r => r.User)
                 .FirstOrDefaultAsync(bp => bp.Id == id);
