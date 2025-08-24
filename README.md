@@ -12,7 +12,7 @@ A comprehensive ASP.NET Core Web API for a blog platform, featuring posts, comme
   - [🔧 Prerequisites](#-prerequisites)
   - [⚙️ Setup](#setup)
 - [🌐 API Endpoints](#-api-endpoints)
-- [🧱 Model](#-model)
+- [🧱 Models](#-models)
 - [❗ Error Handling](#-error-handling)
 - [📦 Required NuGet Packages](#-required-nuget-packages)
 - [🪪 License](#-license)
@@ -30,6 +30,16 @@ A comprehensive ASP.NET Core Web API for a blog platform, featuring posts, comme
 -----
 
 ## 🧰 Technologies Used
+
+- **ASP.NET Core 8.0**: Modern web framework for building APIs
+- **Entity Framework Core**: Object-relational mapping (ORM) for data access
+- **SQL Server**: Database management system
+- **ASP.NET Core Identity**: Authentication and authorization framework
+- **AutoMapper**: Object-to-object mapping library
+- **Serilog**: Structured logging library
+- **Swagger/OpenAPI**: API documentation and testing interface
+- **Newtonsoft.Json**: JSON serialization framework
+- **JSON Patch**: Support for partial resource updates
 
 -----
 
@@ -91,6 +101,14 @@ A comprehensive ASP.NET Core Web API for a blog platform, featuring posts, comme
 | 🩹 PATCH | `/api/comments/{id}`         | Partially update a comment          |
 | ❌ DELETE| `/api/comments/{id}`         | Delete a comment                    |
 
+### Likes
+
+| 🔠 Method | 🌐 Endpoint                    | 📝 Description                        |
+| :--- | :--- | :--- |
+| ➕ POST  | `/api/likes`                   | Toggle like/unlike for post or comment |
+| 🟢 GET   | `/api/likes/blogpost?blogPostId={id}` | Get all likes for a blog post |
+| 🟢 GET   | `/api/likes/comment?commentId={id}`   | Get all likes for a comment   |
+
 -----
 
 ## 🧱 Models
@@ -101,14 +119,16 @@ A comprehensive ASP.NET Core Web API for a blog platform, featuring posts, comme
 public class BlogPost
 {
     public Guid Id { get; set; }
-    public string Title { get; set; }
-    public string Content { get; set; }
+    public required string Title { get; set; }
+    public required string Content { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string UserId { get; set; }
-    public ApplicationUser User { get; set; }
+    public ApplicationUser? User { get; set; }
     public ICollection<Comment> Comments { get; set; }
     public ICollection<Like> Likes { get; set; }
+    public BlogCategory BlogCategory { get; set; }
+    public ICollection<Tag> Tags { get; set; }
 }
 ```
 
@@ -121,13 +141,72 @@ public class Comment
     public string Content { get; set; }
     public DateTime CreatedAt { get; set; }
     public Guid BlogPostId { get; set; }
-    public BlogPost BlogPost { get; set; }
+    public BlogPost? BlogPost { get; set; }
     public string UserId { get; set; }
-    public ApplicationUser User { get; set; }
+    public ApplicationUser? User { get; set; }
     public ICollection<Like> Likes { get; set; }
     public Guid? ParentCommentId { get; set; }
-    public Comment ParentComment { get; set; }
+    public Comment? ParentComment { get; set; }
     public ICollection<Comment> Replies { get; set; }
+}
+```
+
+### Like
+
+```csharp
+public class Like
+{
+    public Guid Id { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public required string UserId { get; set; }
+    public ApplicationUser? User { get; set; }
+    public Guid? BlogPostId { get; set; }
+    public BlogPost? BlogPost { get; set; }
+    public Guid? CommentId { get; set; }
+    public Comment? Comment { get; set; }
+}
+```
+
+### ApplicationUser
+
+```csharp
+public class ApplicationUser : IdentityUser
+{
+    public ICollection<BlogPost> BlogPosts { get; set; }
+    public ICollection<Comment> Comments { get; set; }
+    public ICollection<Like> Likes { get; set; }
+}
+```
+
+### Tag
+
+```csharp
+public class Tag
+{
+    public Guid Id { get; set; }
+    public required string Name { get; set; }
+    public ICollection<BlogPost>? BlogPosts { get; set; }
+}
+```
+
+### BlogCategory
+
+```csharp
+public enum BlogCategory
+{
+    Technology,
+    Education,
+    Business,
+    Lifestyle,
+    Health,
+    Travel,
+    Food,
+    Entertainment,
+    Science,
+    Sports,
+    Finance,
+    News,
+    Opinion
 }
 ```
 
@@ -147,6 +226,7 @@ public class Comment
 
 | 📦 Package Name                                  | 📝 Description                                |
 | :--- | :--- |
+| 🗺️ AutoMapper.Extensions.Microsoft.DependencyInjection | Object-to-object mapping with DI integration    |
 | 📂 Microsoft.AspNetCore.Identity.EntityFrameworkCore | ASP.NET Core Identity provider for EF Core      |
 | 🩹 Microsoft.AspNetCore.JsonPatch                | JSON Patch support                            |
 | 🧩 Microsoft.AspNetCore.Mvc.NewtonsoftJson       | Newtonsoft.Json support                       |
@@ -162,4 +242,4 @@ public class Comment
 
 ## 🪪 License
 
-This project is licensed under the [MIT License](https://www.google.com/search?q=LICENSE.txt).
+This project is licensed under the [MIT License](LICENSE.txt).
