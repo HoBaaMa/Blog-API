@@ -1,4 +1,5 @@
-﻿using Blog_API.Models.Entities;
+﻿using Blog_API.Attributes;
+using Blog_API.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 
 namespace Blog_API.Models.DTOs
@@ -16,7 +17,12 @@ namespace Blog_API.Models.DTOs
         [Required(ErrorMessage = "Category is required.")]
         [Range(0, 13,  ErrorMessage ="Invalid input, please choose a number between {1} and {2}.")]
         public BlogCategory BlogCategory { get; set; }
+        
         [MaxLength(5, ErrorMessage = "Max tags per blog post is {1}.")]
         public ICollection<string> Tags { get; set; } = new List<string>();
+        
+        [MaxLength(10, ErrorMessage = "Maximum {1} images allowed per blog post.")]
+        [ValidImageUrls(ErrorMessage = "One or more image URLs are invalid.")]
+        public ICollection<string> ImageUrls { get; set; } = new List<string>();
     }
 }

@@ -12,5 +12,6 @@ namespace Blog_API.Services.Interface
         Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO blogPostDTO, string userId);
         Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO, string currentUserId);
         Task DeleteBlogPostAsync(Guid id, string currentUserId);
+        Task<IReadOnlyCollection<string>> GetBlogPostImagesAsync(Guid blogPostId);
     }
 }

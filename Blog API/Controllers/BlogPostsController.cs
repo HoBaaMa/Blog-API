@@ -32,7 +32,9 @@ namespace Blog_API.Controllers
         public async Task<IActionResult> CreateBlogPost([FromBody] CreateBlogPostDTO blogPostDTO)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            _logger.LogInformation("API request to create blog post by user {UserId}", currentUserId);
+            _logger.LogInformation("API request to create blog post by user {UserId} with {ImageCount} images", 
+                currentUserId, blogPostDTO.ImageUrls?.Count ?? 0);
+            
 
             var createdPost = await _blogPostService.CreateBlogPostAsync(blogPostDTO, currentUserId);
             return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
@@ -51,9 +53,9 @@ namespace Blog_API.Controllers
         public async Task<IActionResult> UpdateBlogPost(Guid id, [FromBody] CreateBlogPostDTO blogPostDTO)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            _logger.LogInformation("API request to update blog post {BlogPostId} by user {UserId}", id, currentUserId);
+            _logger.LogInformation("API request to update blog post {BlogPostId} by user {UserId} with {ImageCount} images", 
+                id, currentUserId, blogPostDTO.ImageUrls?.Count ?? 0);
             
-
             var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO, currentUserId);
             return Ok(updatedBlogPost);
         }
@@ -98,6 +100,22 @@ namespace Blog_API.Controllers
 
             var pagedResult = await _blogPostService.GetBlogPostsByCategoryPagedAsync(blogCategory, paginationRequest);
             return Ok(pagedResult);
+        }
+
+        /// <summary>
+        /// Retrieves all images for a specific blog post
+        /// </summary>
+        /// <param name="id">Blog post ID</param>
+        /// <returns>Collection of image URLs for the blog post</returns>
+        [HttpGet("{id:guid}/images")]
+        public async Task<IActionResult> GetBlogPostImages(Guid id)
+        {
+            _logger.LogInformation("API request to get images for blog post {BlogPostId}", id);
+            
+            var images = await _blogPostService.GetBlogPostImagesAsync(id);
+            
+            _logger.LogInformation("Successfully retrieved images for blog post {BlogPostId} via API", id);
+            return Ok(new { BlogPostId = id, Images = images, Count = images.Count });
         }
     }
 }

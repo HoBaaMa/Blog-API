@@ -48,6 +48,12 @@ namespace Blog_API.Data
                 e.Property(e => e.BlogCategory)
                 .HasConversion<string>();
 
+                e.Property(e => e.ImageUrls)
+                .HasConversion(
+                    v => string.Join(';', v), // Convert list to string
+                    v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()) // Convert string to list
+                .HasColumnName("ImageUrls");
+
             });
             modelBuilder.Entity<Comment>(e =>
             {

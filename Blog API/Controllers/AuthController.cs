@@ -7,11 +7,11 @@ namespace Blog_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AccountsController : ControllerBase
+    public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
-        private readonly ILogger<AccountsController> _logger;
-        public AccountsController(IAuthService authService, ILogger<AccountsController> logger)
+        private readonly ILogger<AuthController> _logger;
+        public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
             _logger = logger;

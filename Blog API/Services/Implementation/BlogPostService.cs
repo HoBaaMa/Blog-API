@@ -3,6 +3,7 @@ using Blog_API.Models.DTOs;
 using Blog_API.Models.Entities;
 using Blog_API.Repositories.Interfaces;
 using Blog_API.Services.Interface;
+using Blog_API.Utilities;
 
 namespace Blog_API.Services.Implementation
 {
@@ -29,6 +30,29 @@ namespace Blog_API.Services.Implementation
             {
                 var blogPost = _mapper.Map<BlogPost>(createBlogPostDTO);
                 blogPost.UserId = userId;
+
+                // Handle images validation and processing
+                if (createBlogPostDTO.ImageUrls?.Any() == true)
+                {
+                    _logger.LogDebug("Processing {ImageCount} images for blog post", createBlogPostDTO.ImageUrls.Count);
+                    
+                    // Validate image URLs
+                    var (isValid, invalidUrls) = ImageUrlValidator.ValidateImageUrls(createBlogPostDTO.ImageUrls);
+                    if (!isValid)
+                    {
+                        _logger.LogWarning("Invalid image URLs provided: {InvalidUrls}", string.Join(", ", invalidUrls));
+                        throw new ArgumentException($"Invalid image URLs: {string.Join(", ", invalidUrls)}");
+                    }
+
+                    // Remove duplicates and empty URLs
+                    var validImageUrls = createBlogPostDTO.ImageUrls
+                        .Where(url => !string.IsNullOrWhiteSpace(url))
+                        .Distinct()
+                        .ToList();
+
+                    blogPost.ImageUrls = validImageUrls;
+                    _logger.LogDebug("Added {ValidImageCount} valid images to blog post", validImageUrls.Count);
+                }
 
                 // Handle tags - create or find existing tags and associate them with the blog post
                 if (createBlogPostDTO.Tags?.Any() == true)
@@ -221,7 +245,37 @@ namespace Blog_API.Services.Implementation
                 existingBlogPost.BlogCategory = blogPostDTO.BlogCategory;
                 existingBlogPost.UpdatedAt = DateTime.UtcNow;
 
-                // 4. Handle tags
+                // 4. Handle images
+                existingBlogPost.ImageUrls.Clear(); // Clear existing images
+                _logger.LogDebug("Cleared existing images for blog post {BlogPostId}", id);
+
+                if (blogPostDTO.ImageUrls?.Any() == true)
+                {
+                    _logger.LogDebug("Processing {ImageCount} images for blog post update", blogPostDTO.ImageUrls.Count);
+                    
+                    // Validate image URLs
+                    var (isValid, invalidUrls) = ImageUrlValidator.ValidateImageUrls(blogPostDTO.ImageUrls);
+                    if (!isValid)
+                    {
+                        _logger.LogWarning("Invalid image URLs provided during update: {InvalidUrls}", string.Join(", ", invalidUrls));
+                        throw new ArgumentException($"Invalid image URLs: {string.Join(", ", invalidUrls)}");
+                    }
+
+                    // Remove duplicates and empty URLs
+                    var validImageUrls = blogPostDTO.ImageUrls
+                        .Where(url => !string.IsNullOrWhiteSpace(url))
+                        .Distinct()
+                        .ToList();
+
+                    foreach (var imageUrl in validImageUrls)
+                    {
+                        existingBlogPost.ImageUrls.Add(imageUrl);
+                    }
+                    
+                    _logger.LogDebug("Updated blog post {BlogPostId} with {ValidImageCount} valid images", id, validImageUrls.Count);
+                }
+
+                // 5. Handle tags
                 existingBlogPost.Tags.Clear(); // Clear existing tags
                 _logger.LogDebug("Cleared existing tags for blog post {BlogPostId}", id);
 
@@ -244,17 +298,43 @@ namespace Blog_API.Services.Implementation
                     existingBlogPost.Tags = tagsToAssociate;
                 }
 
-                // 5. Save via repository
+                // 6. Save via repository
                 await _blogPostRepository.UpdateAsync(existingBlogPost);
                 _logger.LogInformation("Blog post {BlogPostId} updated successfully by user {UserId}", id, currentUserId);
 
-                // 6. Get updated blog post and return DTO
+                // 7. Get updated blog post and return DTO
                 var updatedBlogPost = await _blogPostRepository.GetByIdAsync(id);
                 return _mapper.Map<BlogPostDTO>(updatedBlogPost);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating blog post {BlogPostId} by user {UserId}", id, currentUserId);
+                throw;
+            }
+        }
+
+        public async Task<IReadOnlyCollection<string>> GetBlogPostImagesAsync(Guid blogPostId)
+        {
+            _logger.LogInformation("Retrieving images for blog post {BlogPostId}", blogPostId);
+            
+            try
+            {
+                var blogPost = await _blogPostRepository.GetByIdAsync(blogPostId);
+
+                if (blogPost == null)
+                {
+                    _logger.LogWarning("Blog post {BlogPostId} not found when retrieving images", blogPostId);
+                    throw new KeyNotFoundException($"Blog post ID: {blogPostId} not found.");
+                }
+
+                _logger.LogInformation("Retrieved {ImageCount} images for blog post {BlogPostId}", 
+                    blogPost.ImageUrls.Count, blogPostId);
+                
+                return blogPost.ImageUrls.ToList().AsReadOnly();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving images for blog post {BlogPostId}", blogPostId);
                 throw;
             }
         }
