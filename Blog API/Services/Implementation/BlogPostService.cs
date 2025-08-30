@@ -167,25 +167,7 @@ namespace Blog_API.Services.Implementation
             }
         }
 
-        public async Task<IReadOnlyCollection<BlogPostDTO>> GetBlogPostsByCategoryAsync(BlogCategory blogCategory)
-        {
-            _logger.LogInformation("Retrieving blog posts for category {BlogCategory}", blogCategory);
-            
-            try
-            {
-                var blogPosts = await _blogPostRepository.GetBlogPostsByCategoryAsync(blogCategory);
-                _logger.LogInformation("Retrieved {BlogPostCount} blog posts for category {BlogCategory}", blogPosts.Count, blogCategory);
-
-                return _mapper.Map<IReadOnlyCollection<BlogPostDTO>>(blogPosts);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving blog posts for category {BlogCategory}", blogCategory);
-                throw;
-            }
-        }
-
-        public async Task<PagedResult<BlogPostDTO>> GetBlogPostsByCategoryPagedAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
+        public async Task<PagedResult<BlogPostDTO>> GetBlogPostsByCategoryAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
         {
             _logger.LogInformation("Retrieving paginated blog posts for category {BlogCategory}, page {PageNumber}, size {PageSize}", 
                 blogCategory, paginationRequest.PageNumber, paginationRequest.PageSize);
