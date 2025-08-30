@@ -5,7 +5,7 @@ namespace Blog_API.Services.Interface
 {
     public interface IBlogPostService
     {
-        Task<IReadOnlyCollection<BlogPostDTO>> GetAllBlogPostsAsync();
+        Task<IReadOnlyCollection<BlogPostDTO>> GetAllBlogPostsAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true);
         Task<PagedResult<BlogPostDTO>> GetBlogPostsByCategoryAsync(BlogCategory blogCategory, PaginationRequest paginationRequest);
         Task<BlogPostDTO?> GetBlogPostByIdAsync(Guid id);
         Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO blogPostDTO, string userId);

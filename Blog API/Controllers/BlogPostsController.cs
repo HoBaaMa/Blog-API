@@ -23,10 +23,10 @@ namespace Blog_API.Controllers
         /// </summary>
         /// <returns>An <see cref="IActionResult"/> containing a 200 OK response with the collection of blog posts.</returns>
         [HttpGet]
-        public async Task<IActionResult> GetAllBlogPosts()
+        public async Task<IActionResult> GetAllBlogPosts([FromQuery] string? filterOn,[FromQuery] string? filterQuery, [FromQuery] string? sortBy, [FromQuery] bool? isAscending = true)
         {
             _logger.LogInformation("API request to get all blog posts");
-            var blogPosts = await _blogPostService.GetAllBlogPostsAsync();
+            var blogPosts = await _blogPostService.GetAllBlogPostsAsync(filterOn, filterQuery, sortBy, isAscending);
             return Ok(blogPosts);
         }
 
@@ -99,12 +99,11 @@ namespace Blog_API.Controllers
         /// <param name="paginationRequest">Pagination parameters including page number and page size</param>
         /// <returns>Paginated result containing blog posts and pagination metadata</returns>
         [HttpGet("blogCategory")]
-        public async Task<IActionResult> GetBlogPostsByCategoryPaged(
+        public async Task<IActionResult> GetBlogPostsByCategory(
             [FromQuery] Models.Entities.BlogCategory blogCategory,
             [FromQuery] PaginationRequest paginationRequest)
         {
             _logger.LogInformation("API request to get paginated blog posts by category {BlogCategory}", blogCategory);
-            
 
             var pagedResult = await _blogPostService.GetBlogPostsByCategoryAsync(blogCategory, paginationRequest);
             return Ok(pagedResult);

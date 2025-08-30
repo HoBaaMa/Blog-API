@@ -13,7 +13,7 @@ namespace Blog_API.Services.Implementation
         private readonly ITagRepository _tagRepository;
         private readonly IMapper _mapper;
         private readonly ILogger<BlogPostService> _logger;
-        
+
         public BlogPostService(IMapper mapper, IBlogPostRepository blogPostRepository, ITagRepository tagRepository, ILogger<BlogPostService> logger)
         {
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -25,7 +25,7 @@ namespace Blog_API.Services.Implementation
         public async Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO createBlogPostDTO, string userId)
         {
             _logger.LogInformation("Creating blog post for user {UserId} with title '{Title}'", userId, createBlogPostDTO.Title);
-            
+
             try
             {
                 var blogPost = _mapper.Map<BlogPost>(createBlogPostDTO);
@@ -35,7 +35,7 @@ namespace Blog_API.Services.Implementation
                 if (createBlogPostDTO.ImageUrls?.Any() == true)
                 {
                     _logger.LogDebug("Processing {ImageCount} images for blog post", createBlogPostDTO.ImageUrls.Count);
-                    
+
                     // Validate image URLs
                     var (isValid, invalidUrls) = ImageUrlValidator.ValidateImageUrls(createBlogPostDTO.ImageUrls);
                     if (!isValid)
@@ -58,12 +58,12 @@ namespace Blog_API.Services.Implementation
                 if (createBlogPostDTO.Tags?.Any() == true)
                 {
                     _logger.LogDebug("Processing {TagCount} tags for blog post", createBlogPostDTO.Tags.Count);
-                    
+
                     var tagsToAssociate = new List<Tag>();
                     foreach (var tagName in createBlogPostDTO.Tags)
                     {
                         var tag = await _tagRepository.GetTagByNameAsync(tagName);
-                        
+
                         if (tag == null)
                         {
                             _logger.LogDebug("Creating new tag: {TagName}", tagName);
@@ -93,31 +93,23 @@ namespace Blog_API.Services.Implementation
             }
         }
 
-        /// <summary>
-        /// Deletes a blog post by its identifier if the specified user is the owner.
-        /// </summary>
-        /// <param name="id">The identifier of the blog post to delete.</param>
-        /// <param name="currentUserId">The identifier of the user attempting the deletion; must match the post's owner.</param>
-        /// <exception cref="UnauthorizedAccessException">Thrown when the specified user does not own the blog post.</exception>
-        /// <exception cref="KeyNotFoundException">Thrown when no blog post exists with the given <paramref name="id"/>.</exception>
-        /// <exception cref="DatabaseOperationException">Thrown when the database delete operation fails (wraps <see cref="DbUpdateException"/>).</exception>
         public async Task DeleteBlogPostAsync(Guid id, string currentUserId)
         {
             _logger.LogInformation("Attempting to delete blog post {BlogPostId} by user {UserId}", id, currentUserId);
-            
+
             try
             {
                 var blogPost = await _blogPostRepository.GetByIdAsync(id);
-                
+
                 if (blogPost == null)
                 {
                     _logger.LogWarning("Blog post {BlogPostId} not found for deletion", id);
                     throw new KeyNotFoundException($"Blog Post ID: {id} not found.");
                 }
-                
+
                 if (blogPost.UserId != currentUserId)
                 {
-                    _logger.LogWarning("Unauthorized deletion attempt for blog post {BlogPostId} by user {UserId}. Post owner: {OwnerUserId}", 
+                    _logger.LogWarning("Unauthorized deletion attempt for blog post {BlogPostId} by user {UserId}. Post owner: {OwnerUserId}",
                         id, currentUserId, blogPost.UserId);
                     throw new UnauthorizedAccessException();
                 }
@@ -132,13 +124,13 @@ namespace Blog_API.Services.Implementation
             }
         }
 
-        public async Task<IReadOnlyCollection<BlogPostDTO>> GetAllBlogPostsAsync()
+        public async Task<IReadOnlyCollection<BlogPostDTO>> GetAllBlogPostsAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true)
         {
             _logger.LogInformation("Retrieving all blog posts");
-            
+
             try
             {
-                var blogPosts = await _blogPostRepository.GetAllAsync();
+                var blogPosts = await _blogPostRepository.GetAllAsync(filterOn, filterQuery, sortBy, isAscending);
                 _logger.LogInformation("Retrieved {BlogPostCount} blog posts", blogPosts.Count);
 
 
@@ -154,7 +146,7 @@ namespace Blog_API.Services.Implementation
         public async Task<BlogPostDTO?> GetBlogPostByIdAsync(Guid id)
         {
             _logger.LogInformation("Retrieving blog post {BlogPostId}", id);
-            
+
             try
             {
                 var blogPost = await _blogPostRepository.GetByIdAsync(id);
@@ -174,15 +166,30 @@ namespace Blog_API.Services.Implementation
                 throw;
             }
         }
-        // TODO: LikeCount in the blogPost Query!
-        public async Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO)
+
+        public async Task<PagedResult<BlogPostDTO>> GetBlogPostsByCategoryAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
         {
-            var blogPost = await _context.BlogPosts
-                .Include(u => u.User)
-                .Include(t => t.Tags)
-                .FirstOrDefaultAsync(bp => bp.Id == id);
-                
-            if (blogPost?.UserId != currentUserId)
+            _logger.LogInformation("Retrieving paginated blog posts for category {BlogCategory}, page {PageNumber}, size {PageSize}",
+                blogCategory, paginationRequest.PageNumber, paginationRequest.PageSize);
+
+            try
+            {
+                var (blogPosts, totalCount) = await _blogPostRepository.GetBlogPostsByCategoryAsync(blogCategory, paginationRequest);
+
+                _logger.LogInformation("Retrieved {BlogPostCount} blog posts out of {TotalCount} for category {BlogCategory}",
+                    blogPosts.Count, totalCount, blogCategory);
+
+                var blogPostDTOs = _mapper.Map<IReadOnlyCollection<BlogPostDTO>>(blogPosts);
+
+                return new PagedResult<BlogPostDTO>
+                {
+                    Data = blogPostDTOs,
+                    TotalCount = totalCount,
+                    PageNumber = paginationRequest.PageNumber,
+                    PageSize = paginationRequest.PageSize
+                };
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving paginated blog posts for category {BlogCategory}", blogCategory);
                 throw;
@@ -192,7 +199,7 @@ namespace Blog_API.Services.Implementation
         public async Task<BlogPostDTO> UpdateBlogPostAsync(Guid id, CreateBlogPostDTO blogPostDTO, string currentUserId)
         {
             _logger.LogInformation("Updating blog post {BlogPostId} by user {UserId}", id, currentUserId);
-            
+
             try
             {
                 // 1. Get existing blog post
@@ -207,7 +214,7 @@ namespace Blog_API.Services.Implementation
                 // 2. Authorization check
                 if (existingBlogPost.UserId != currentUserId)
                 {
-                    _logger.LogWarning("Unauthorized update attempt for blog post {BlogPostId} by user {UserId}. Post owner: {OwnerUserId}", 
+                    _logger.LogWarning("Unauthorized update attempt for blog post {BlogPostId} by user {UserId}. Post owner: {OwnerUserId}",
                         id, currentUserId, existingBlogPost.UserId);
                     throw new UnauthorizedAccessException();
                 }
@@ -227,7 +234,7 @@ namespace Blog_API.Services.Implementation
                 if (blogPostDTO.ImageUrls?.Any() == true)
                 {
                     _logger.LogDebug("Processing {ImageCount} images for blog post update", blogPostDTO.ImageUrls.Count);
-                    
+
                     // Validate image URLs
                     var (isValid, invalidUrls) = ImageUrlValidator.ValidateImageUrls(blogPostDTO.ImageUrls);
                     if (!isValid)
@@ -246,7 +253,7 @@ namespace Blog_API.Services.Implementation
                     {
                         existingBlogPost.ImageUrls.Add(imageUrl);
                     }
-                    
+
                     _logger.LogDebug("Updated blog post {BlogPostId} with {ValidImageCount} valid images", id, validImageUrls.Count);
                 }
 
@@ -257,7 +264,7 @@ namespace Blog_API.Services.Implementation
                 if (blogPostDTO.Tags?.Any() == true)
                 {
                     _logger.LogDebug("Processing {TagCount} tags for blog post update", blogPostDTO.Tags.Count);
-                    
+
                     var tagsToAssociate = new List<Tag>();
                     foreach (var tagName in blogPostDTO.Tags)
                     {
@@ -291,7 +298,7 @@ namespace Blog_API.Services.Implementation
         public async Task<IReadOnlyCollection<string>> GetBlogPostImagesAsync(Guid blogPostId)
         {
             _logger.LogInformation("Retrieving images for blog post {BlogPostId}", blogPostId);
-            
+
             try
             {
                 var blogPost = await _blogPostRepository.GetByIdAsync(blogPostId);
@@ -302,9 +309,9 @@ namespace Blog_API.Services.Implementation
                     throw new KeyNotFoundException($"Blog post ID: {blogPostId} not found.");
                 }
 
-                _logger.LogInformation("Retrieved {ImageCount} images for blog post {BlogPostId}", 
+                _logger.LogInformation("Retrieved {ImageCount} images for blog post {BlogPostId}",
                     blogPost.ImageUrls.Count, blogPostId);
-                
+
                 return blogPost.ImageUrls.ToList().AsReadOnly();
             }
             catch (Exception ex)
