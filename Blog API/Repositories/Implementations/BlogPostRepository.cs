@@ -1,4 +1,4 @@
-﻿using Blog_API.Data;
+using Blog_API.Data;
 using Blog_API.Models.DTOs;
 using Blog_API.Models.Entities;
 using Blog_API.Repositories.Interfaces;
@@ -20,12 +20,29 @@ namespace Blog_API.Repositories.Implementations
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Removes the given BlogPost entity from the database and persists the change.
+        /// </summary>
+        /// <param name="blogPost">The BlogPost entity to remove.</param>
         public async Task DeleteAsync(BlogPost blogPost)
         {
             _context.BlogPosts.Remove(blogPost);
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Retrieves all blog posts with related data, optionally filtered and sorted.
+        /// </summary>
+        /// <remarks>
+        /// The query is executed with no tracking and eagerly loads User, Likes, Tags, and top-level Comments (with their Users, Likes and Replies).
+        /// Supported filters: when <paramref name="filterOn"/> equals "Title" (case-insensitive), posts whose Title contains <paramref name="filterQuery"/> are returned.
+        /// Supported sorting: when <paramref name="sortBy"/> equals "CreatedAt" (case-insensitive), results are ordered by the CreatedAt timestamp.
+        /// </remarks>
+        /// <param name="filterOn">The field to filter on (currently supports "Title"); ignored if null or whitespace.</param>
+        /// <param name="filterQuery">The substring to search for when filtering; ignored if null or whitespace.</param>
+        /// <param name="sortBy">The field to sort by (currently supports "CreatedAt"); ignored if null or whitespace.</param>
+        /// <param name="isAscending">When sorting, true for ascending order and false for descending. Defaults to true when null.</param>
+        /// <returns>A read-only collection of matching <see cref="BlogPost"/> entities including their related data.</returns>
         public async Task<IReadOnlyCollection<BlogPost>> GetAllAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true)
         {
             var query = _context.BlogPosts
@@ -63,6 +80,15 @@ namespace Blog_API.Repositories.Implementations
             return await query.ToListAsync();
         }
 
+        /// <summary>
+        /// Retrieves a paged list of blog posts for the specified category along with the total number of posts in that category.
+        /// </summary>
+        /// <param name="blogCategory">The category to filter blog posts by.</param>
+        /// <param name="paginationRequest">Pagination settings (PageNumber and PageSize) used to page the results.</param>
+        /// <returns>
+        /// A tuple where <c>blogPosts</c> is the requested page of blog posts (includes User, Tags, Likes and top-level Comments with their User)
+        /// and <c>totalCount</c> is the total number of blog posts in the specified category before paging is applied.
+        /// </returns>
         public async Task<(IReadOnlyCollection<BlogPost> blogPosts, int totalCount)> GetBlogPostsByCategoryAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
         {
             var query = _context.BlogPosts
