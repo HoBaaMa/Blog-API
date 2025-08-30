@@ -1,4 +1,4 @@
-﻿using Blog_API.Models.DTOs;
+using Blog_API.Models.DTOs;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,21 +12,31 @@ namespace Blog_API.Controllers
     {
         private readonly IBlogPostService _blogPostService;
         private readonly ILogger<BlogPostsController> _logger;
-        
         public BlogPostsController(IBlogPostService blogPostService, ILogger<BlogPostsController> logger)
         {
             _blogPostService = blogPostService ?? throw new ArgumentNullException(nameof(blogPostService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        /// <summary>
+        /// Retrieves all blog posts.
+        /// </summary>
+        /// <returns>An <see cref="IActionResult"/> containing a 200 OK response with the collection of blog posts.</returns>
         [HttpGet]
-        public async Task<IActionResult> GetAllBlogPosts()
+        public async Task<IActionResult> GetAllBlogPosts([FromQuery] string? filterOn,[FromQuery] string? filterQuery, [FromQuery] string? sortBy, [FromQuery] bool? isAscending = true)
         {
             _logger.LogInformation("API request to get all blog posts");
-            var blogPosts = await _blogPostService.GetAllBlogPostsAsync();
+            var blogPosts = await _blogPostService.GetAllBlogPostsAsync(filterOn, filterQuery, sortBy, isAscending);
             return Ok(blogPosts);
         }
 
+        /// <summary>
+        /// Creates a new blog post for the authenticated user.
+        /// </summary>
+        /// <param name="blogPostDTO">Data for the blog post to create.</param>
+        /// <returns>
+        /// 201 Created with the created blog post in the response body and a Location header pointing to <see cref="GetBlogPostById(Guid)"/>.
+        /// </returns>
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateBlogPost([FromBody] CreateBlogPostDTO blogPostDTO)
@@ -40,6 +50,11 @@ namespace Blog_API.Controllers
             return CreatedAtAction(nameof(GetBlogPostById), new { id = createdPost?.Id }, createdPost);
         }
 
+        /// <summary>
+        /// Retrieves a blog post by its unique identifier.
+        /// </summary>
+        /// <param name="id">The GUID of the blog post to retrieve.</param>
+        /// <returns>An <see cref="IActionResult"/> containing the blog post in a 200 OK response.</returns>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetBlogPostById(Guid id)
         {
@@ -48,6 +63,13 @@ namespace Blog_API.Controllers
             return Ok(blogPost);
         }
 
+        /// <summary>
+        /// Updates an existing blog post identified by <paramref name="id"/> with the supplied data.
+        /// Requires an authenticated user.
+        /// </summary>
+        /// <param name="id">The GUID of the blog post to update (from route).</param>
+        /// <param name="blogPostDTO">The blog post data to apply (from request body).</param>
+        /// <returns>200 OK with the updated blog post model.</returns>
         [HttpPut("{id:guid}")]
         [Authorize]
         public async Task<IActionResult> UpdateBlogPost(Guid id, [FromBody] CreateBlogPostDTO blogPostDTO)
@@ -59,7 +81,6 @@ namespace Blog_API.Controllers
             var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO, currentUserId);
             return Ok(updatedBlogPost);
         }
-
         [HttpDelete("{id:guid}")]
         [Authorize]
         public async Task<IActionResult> DeleteBlogPost(Guid id)
@@ -78,12 +99,11 @@ namespace Blog_API.Controllers
         /// <param name="paginationRequest">Pagination parameters including page number and page size</param>
         /// <returns>Paginated result containing blog posts and pagination metadata</returns>
         [HttpGet("blogCategory")]
-        public async Task<IActionResult> GetBlogPostsByCategoryPaged(
+        public async Task<IActionResult> GetBlogPostsByCategory(
             [FromQuery] Models.Entities.BlogCategory blogCategory,
             [FromQuery] PaginationRequest paginationRequest)
         {
             _logger.LogInformation("API request to get paginated blog posts by category {BlogCategory}", blogCategory);
-            
 
             var pagedResult = await _blogPostService.GetBlogPostsByCategoryAsync(blogCategory, paginationRequest);
             return Ok(pagedResult);

@@ -2,6 +2,7 @@
 using Blog_API.Models.DTOs;
 using Blog_API.Models.Entities;
 using Blog_API.Repositories.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Blog_API.Repositories.Implementations
@@ -25,9 +26,9 @@ namespace Blog_API.Repositories.Implementations
             await _context.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyCollection<BlogPost>> GetAllAsync()
+        public async Task<IReadOnlyCollection<BlogPost>> GetAllAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true)
         {
-            return await _context.BlogPosts              
+            var query = _context.BlogPosts
                 .AsNoTracking()
                 .Include(bp => bp.User)
                 .Include(bp => bp.Likes)
@@ -41,24 +42,28 @@ namespace Blog_API.Repositories.Implementations
                     .Where(c => c.ParentCommentId == null))
                     .ThenInclude(c => c.Replies)
                     .ThenInclude(u => u.User)
-                .ToListAsync();
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(filterOn) && !string.IsNullOrWhiteSpace(filterQuery))
+            {
+                if (filterOn.Equals("Title", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(q => q.Title.Contains(filterQuery));
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(sortBy))
+            {
+                if (sortBy.Equals("CreatedAt", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = isAscending ?? true ? query.OrderBy(q => q.CreatedAt) : query.OrderByDescending(q => q.CreatedAt);
+                }
+            }
+
+            return await query.ToListAsync();
         }
 
-        public async Task<IReadOnlyCollection<BlogPost>> GetBlogPostsByCategoryAsync(BlogCategory blogCategory)
-        {
-            return await _context.BlogPosts
-                .Where(bp => bp.BlogCategory == blogCategory)
-                .AsNoTracking()
-                .OrderByDescending(bp => bp.CreatedAt) // Consistent ordering
-                .Include(bp => bp.User)
-                .Include(bp => bp.Tags)
-                .Include(bp => bp.Likes)
-                .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
-                    .ThenInclude(c => c.User)
-                .ToListAsync();
-        }
-
-        public async Task<(IReadOnlyCollection<BlogPost> blogPosts, int totalCount)> GetBlogPostsByCategoryPagedAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
+        public async Task<(IReadOnlyCollection<BlogPost> blogPosts, int totalCount)> GetBlogPostsByCategoryAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
         {
             var query = _context.BlogPosts
                 .Where(bp => bp.BlogCategory == blogCategory)

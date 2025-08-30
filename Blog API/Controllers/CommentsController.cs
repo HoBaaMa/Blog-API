@@ -1,4 +1,4 @@
-﻿using Blog_API.Models.DTOs;
+using Blog_API.Models.DTOs;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
@@ -13,18 +13,12 @@ namespace Blog_API.Controllers
     {
         private readonly ICommentService _commentService;
         private readonly ILogger<CommentsController> _logger;
-        
         public CommentsController(ICommentService commentService, ILogger<CommentsController> logger)
         {
             _commentService = commentService ?? throw new ArgumentNullException(nameof(commentService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
         
-        /// <summary>
-        /// Creates a new comment or reply to an existing comment
-        /// </summary>
-        /// <param name="commentDTO">Comment data including content and optional parent comment ID</param>
-        /// <returns>Created comment details</returns>
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateComment([FromBody] CreateCommentDTO commentDTO)
@@ -39,11 +33,6 @@ namespace Blog_API.Controllers
             return CreatedAtAction(nameof(GetCommentById), new { id = createdComment.Id }, createdComment);
         }
 
-        /// <summary>
-        /// Retrieves all comments for a specific blog post
-        /// </summary>
-        /// <param name="id">Blog post ID</param>
-        /// <returns>Collection of comments for the blog post</returns>
         [HttpGet("blogpost/{id:guid}")]
         public async Task<IActionResult> GetAllCommentsForBlogPost(Guid id)
         {
@@ -55,11 +44,6 @@ namespace Blog_API.Controllers
             return Ok(comments);
         }
 
-        /// <summary>
-        /// Retrieves a specific comment by ID
-        /// </summary>
-        /// <param name="id">Comment ID</param>
-        /// <returns>Comment details</returns>
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetCommentById(Guid id)
         {
@@ -71,12 +55,6 @@ namespace Blog_API.Controllers
             return Ok(comment);
         }
 
-        /// <summary>
-        /// Updates a comment using JSON Patch operations
-        /// </summary>
-        /// <param name="id">Comment ID</param>
-        /// <param name="patchDoc">JSON Patch document with update operations</param>
-        /// <returns>Updated comment details</returns>
         [HttpPatch("{id:guid}")]
         [Authorize]
         public async Task<IActionResult> UpdateComment(Guid id, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc)
@@ -90,11 +68,6 @@ namespace Blog_API.Controllers
             return Ok(updatedComment);
         }
 
-        /// <summary>
-        /// Deletes a comment
-        /// </summary>
-        /// <param name="id">Comment ID</param>
-        /// <returns>No content on successful deletion</returns>
         [HttpDelete("{id:guid}")]
         [Authorize]
         public async Task<IActionResult> DeleteComment(Guid id)
