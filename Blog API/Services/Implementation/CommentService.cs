@@ -1,149 +1,206 @@
-﻿using Blog_API.Data;
-using Blog_API.DTOs;
-using Blog_API.Models;
+﻿using Blog_API.Models.Entities;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Blog_API.Exceptions;
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
+using Blog_API.Models.DTOs;
+using Blog_API.Repositories.Interfaces;
 
 namespace Blog_API.Services.Implementation
 {
     public class CommentService : ICommentService
     {
-        private readonly BlogDbContext _context;
         private readonly IMapper _mapper;
-        public CommentService(BlogDbContext context, IMapper mapper)
+        private readonly ICommentRepository _commentRepository;
+        private readonly IBlogPostRepository _blogPostRepository;
+        private readonly ILogger<CommentService> _logger;
+        
+        public CommentService(IMapper mapper, ICommentRepository commentRepository, IBlogPostRepository blogPostRepository, ILogger<CommentService> logger)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _commentRepository = commentRepository ?? throw new ArgumentNullException(nameof(commentRepository));
+            _blogPostRepository = blogPostRepository ?? throw new ArgumentNullException(nameof(blogPostRepository));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
         
         public async Task<CommentDTO> CreateCommentAsync(CreateCommentDTO commentDTO, string userId)
         {
-            var comment = new Comment
-            {
-                Content = commentDTO.Content,
-                BlogPostId = commentDTO.BlogPostId,
-                ParentCommentId = commentDTO.ParentCommentId,
-                UserId = userId
-            };
-
             /*
-             * Brainstorming:
-             * ParentCommentId = null => means it's top-level comment
-             * ParenctCommentId != null => means it's a reply to the parent comment with that ID
-             * EF Core will handle the relationship automatically and add the reply comment to the Replies collection of the parent comment.
-             */
-            if (commentDTO.ParentCommentId.HasValue)
+            * Brainstorming:
+            * ParentCommentId == null => means it's top-level comment
+            * ParentCommentId != null => means it's a reply to the parent comment with that ID
+            * EF Core will handle the relationship automatically and add the reply comment to the Replies collection of the parent comment.
+            */
+            _logger.LogInformation("Creating comment for user {UserId} on blog post {BlogPostId}", userId, commentDTO.BlogPostId);
+
+            try
             {
-                bool parentExists = await _context.Comments.AnyAsync(c => c.Id == commentDTO.ParentCommentId.Value && c.BlogPostId == commentDTO.BlogPostId);
-                if (!parentExists)
+                var comment = _mapper.Map<Comment>(commentDTO);
+                comment.UserId = userId;
+
+                // Check if this is a reply to another comment
+                if (commentDTO.ParentCommentId.HasValue)
                 {
-                    throw new KeyNotFoundException($"Parent comment with ID: {commentDTO.ParentCommentId.Value} not found.");
+                    _logger.LogDebug("Checking if parent comment {ParentCommentId} exists for blog post {BlogPostId}", 
+                        commentDTO.ParentCommentId.Value, commentDTO.BlogPostId);
+                    
+                    bool parentExists = await _commentRepository.IsParentExistsAsync(commentDTO.ParentCommentId.Value, commentDTO.BlogPostId);
+                    if (!parentExists)
+                    {
+                        _logger.LogWarning("Parent comment {ParentCommentId} not found for blog post {BlogPostId}", 
+                            commentDTO.ParentCommentId.Value, commentDTO.BlogPostId);
+                        throw new KeyNotFoundException($"Parent comment with ID: {commentDTO.ParentCommentId.Value} not found.");
+                    }
+                    _logger.LogDebug("Parent comment {ParentCommentId} found and valid", commentDTO.ParentCommentId.Value);
                 }
+                else
+                {
+                    _logger.LogDebug("Creating top-level comment (no parent)");
+                }
+
+                await _commentRepository.AddAsync(comment);
+                _logger.LogInformation("Comment created successfully with ID {CommentId} for user {UserId}", comment.Id, userId);
+
+                var createdComment = await _commentRepository.GetByIdAsync(comment.Id);
+                return _mapper.Map<CommentDTO>(createdComment);
             }
-            await _context.Comments.AddAsync(comment);
-            await _context.SaveChangesAsync();
-
-
-            return _mapper.Map<CommentDTO>(comment);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating comment for user {UserId} on blog post {BlogPostId}", userId, commentDTO.BlogPostId);
+                throw;
+            }
         }
 
         public async Task DeleteCommentAsync(Guid commentId, string currentUserId)
         {
-            var isOwner = await _context.Comments.AnyAsync(c => c.Id == commentId && c.UserId == currentUserId);
-            if (!isOwner)
-            {
-                bool exists = await _context.Comments.AnyAsync(c => c.Id == commentId);
-                throw exists ? new UnauthorizedAccessException() : new KeyNotFoundException($"Comment ID: {commentId} not found.");
-            }
-            _context.Comments.Remove(new Comment { Id = commentId});
+            _logger.LogInformation("Attempting to delete comment {CommentId} by user {UserId}", commentId, currentUserId);
+
             try
             {
-                await _context.SaveChangesAsync();
+                var comment = await _commentRepository.GetByIdAsync(commentId);
+
+                if (comment == null)
+                {
+                    _logger.LogWarning("Comment {CommentId} not found for deletion", commentId);
+                    throw new KeyNotFoundException($"Comment ID: {commentId} not found.");
+                }
+
+                if (comment.UserId != currentUserId)
+                {
+                    _logger.LogWarning("Unauthorized deletion attempt for comment {CommentId} by user {UserId}. Comment owner: {OwnerUserId}", 
+                        commentId, currentUserId, comment.UserId);
+                    throw new UnauthorizedAccessException();
+                }
+
+                await _commentRepository.DeleteAsync(comment);
+                _logger.LogInformation("Comment {CommentId} deleted successfully by user {UserId}", commentId, currentUserId);
             }
-            catch (DbUpdateException ex)
+            catch (Exception ex)
             {
-                throw new DatabaseOperationException("Failed to delete comment", ex);
+                _logger.LogError(ex, "Error deleting comment {CommentId} by user {UserId}", commentId, currentUserId);
+                throw;
             }
-            
         }
 
         public async Task<IReadOnlyCollection<CommentDTO>> GetAllCommentsForBlogPostAsync(Guid blogPostId)
         {
-            // blogPostId is not found exception
+            _logger.LogInformation("Retrieving all comments for blog post {BlogPostId}", blogPostId);
 
-            if (!await _context.BlogPosts.AnyAsync(bp => bp.Id == blogPostId))
+            try
             {
-                throw new KeyNotFoundException($"Blog Post with ID {blogPostId} not found.");
+                // Verify blog post exists first
+                var blogPost = await _blogPostRepository.GetByIdAsync(blogPostId);
+                if (blogPost == null)
+                {
+                    _logger.LogWarning("Blog post {BlogPostId} not found when retrieving comments", blogPostId);
+                    throw new KeyNotFoundException($"Blog Post with ID {blogPostId} not found.");
+                }
+
+                var comments = await _commentRepository.GetAllForBlogPostAsync(blogPostId);
+                _logger.LogInformation("Retrieved {CommentCount} comments for blog post {BlogPostId}", comments.Count, blogPostId);
+
+                if (comments.Count == 0)
+                {
+                    _logger.LogInformation("No comments found for blog post {BlogPostId}", blogPostId);
+                    throw new KeyNotFoundException($"No Comments found for Blog Post ID {blogPostId}.");
+                }
+
+                return _mapper.Map<IReadOnlyCollection<CommentDTO>>(comments);
             }
-
-            var Comments = await _context.Comments
-                .AsNoTracking()
-                .Where(c => c.BlogPostId == blogPostId && c.ParentCommentId == null)
-                .Include(u => u.User)
-                .Include(r => r.Replies)
-                    .ThenInclude(u => u.User)
-                .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
-                .ToListAsync();
-
-            if (Comments.Count() == 0)
+            catch (Exception ex)
             {
-                throw new KeyNotFoundException($"No Comments found for Blog Post ID {blogPostId}.");
+                _logger.LogError(ex, "Error retrieving comments for blog post {BlogPostId}", blogPostId);
+                throw;
             }
-
-            return Comments;
         }
 
         public async Task<CommentDTO?> GetCommentByIdAsync(Guid commentId)
         {
-            var comment = await _context.Comments
-                .AsNoTracking()
-                .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
-                .FirstOrDefaultAsync(c => c.Id == commentId);
+            _logger.LogInformation("Retrieving comment {CommentId}", commentId);
 
-            if (comment == null)
+            try
             {
-                throw new KeyNotFoundException($"Comment with ID {commentId} not found.");
-            }
+                var comment = await _commentRepository.GetByIdAsync(commentId);
 
-            return comment;
+                if (comment == null)
+                {
+                    _logger.LogWarning("Comment {CommentId} not found", commentId);
+                    throw new KeyNotFoundException($"Comment with ID {commentId} not found.");
+                }
+
+                _logger.LogInformation("Comment {CommentId} retrieved successfully", commentId);
+                return _mapper.Map<CommentDTO>(comment);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving comment {CommentId}", commentId);
+                throw;
+            }
         }
 
         public async Task<CommentDTO> UpdateCommentAsync(Guid commentId, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc, string currentUserId)
         {
-            var comment = await _context.Comments
-                .ProjectTo<CommentDTO>(_mapper.ConfigurationProvider)
-                .FirstOrDefaultAsync(c => c.Id == commentId);
+            _logger.LogInformation("Updating comment {CommentId} by user {UserId}", commentId, currentUserId);
 
-            if (comment == null)
+            try
             {
-                throw new KeyNotFoundException($"Comment ID: {commentId} not found.");
+                var comment = await _commentRepository.GetByIdAsync(commentId);
+
+                if (comment == null)
+                {
+                    _logger.LogWarning("Comment {CommentId} not found for update", commentId);
+                    throw new KeyNotFoundException($"Comment ID: {commentId} not found.");
+                }
+
+                if (comment.UserId != currentUserId)
+                {
+                    _logger.LogWarning("Unauthorized update attempt for comment {CommentId} by user {UserId}. Comment owner: {OwnerUserId}", 
+                        commentId, currentUserId, comment.UserId);
+                    throw new UnauthorizedAccessException();
+                }
+
+                var originalContent = comment.Content;
+                var commentToPatch = new UpdateCommentDTO
+                {
+                    Content = comment.Content
+                };
+
+                _logger.LogDebug("Applying patch operations to comment {CommentId}", commentId);
+                patchDoc.ApplyTo(commentToPatch);
+                comment.Content = commentToPatch.Content;
+
+                await _commentRepository.UpdateAsync(comment);
+                
+                _logger.LogInformation("Comment {CommentId} updated successfully by user {UserId}. Content changed from '{OriginalContent}' to '{NewContent}'", 
+                    commentId, currentUserId, originalContent, comment.Content);
+
+                return _mapper.Map<CommentDTO>(comment);
             }
-
-            if (comment.UserId != currentUserId)
+            catch (Exception ex)
             {
-                throw new UnauthorizedAccessException();
+                _logger.LogError(ex, "Error updating comment {CommentId} by user {UserId}", commentId, currentUserId);
+                throw;
             }
-
-            var commentToPatch = new UpdateCommentDTO
-            {
-                Content = comment.Content
-            };
-
-            // Apply changes with processing error!
-            patchDoc.ApplyTo(commentToPatch, error =>
-            {
-                throw new ArgumentException();
-            });
-
-            comment.Content = commentToPatch.Content;
-
-            await _context.SaveChangesAsync();
-            return _mapper.Map<CommentDTO>(comment);
         }
     }
 }

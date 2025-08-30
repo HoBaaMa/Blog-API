@@ -1,6 +1,6 @@
-﻿using Blog_API.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Blog_API.Models.Entities;
 
 namespace Blog_API.Data
 {
@@ -47,6 +47,12 @@ namespace Blog_API.Data
 
                 e.Property(e => e.BlogCategory)
                 .HasConversion<string>();
+
+                e.Property(e => e.ImageUrls)
+                .HasConversion(
+                    v => string.Join(';', v), // Convert list to string
+                    v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()) // Convert string to list
+                .HasColumnName("ImageUrls");
 
             });
             modelBuilder.Entity<Comment>(e =>
@@ -110,7 +116,8 @@ namespace Blog_API.Data
                 .WithMany(t => t.Tags);
 
                 //t.Property(t => t.Name)
-                //.HasMaxLength(25);
+                //.HasMaxLength(25)
+                //.IsRequired();
             });
         }
     }
