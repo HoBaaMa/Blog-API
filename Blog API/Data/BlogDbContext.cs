@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Blog_API.Models.Entities;
+using Blog_API.Data.Seeders;
 
 namespace Blog_API.Data
 {
@@ -119,6 +120,13 @@ namespace Blog_API.Data
                 //.HasMaxLength(25)
                 //.IsRequired();
             });
+
+
+            // Seeding Roles
+            RoleSeeder.SeedRoles(modelBuilder);
+
+            // Seeding Users
+            UserSeeder.SeedUsers(modelBuilder);
         }
     }
 }

@@ -21,7 +21,7 @@ namespace Blog_API.Models.DTOs
         [MaxLength(5, ErrorMessage = "Max tags per blog post is {1}.")]
         public ICollection<string> Tags { get; set; } = new List<string>();
         
-        [MaxLength(10, ErrorMessage = "Maximum {1} images allowed per blog post.")]
+        [MaxLength(8, ErrorMessage = "Maximum {1} images allowed per blog post.")]
         [ValidImageUrls(ErrorMessage = "One or more image URLs are invalid.")]
         public ICollection<string> ImageUrls { get; set; } = new List<string>();
     }

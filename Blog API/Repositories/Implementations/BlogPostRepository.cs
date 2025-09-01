@@ -2,7 +2,6 @@
 using Blog_API.Models.DTOs;
 using Blog_API.Models.Entities;
 using Blog_API.Repositories.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Blog_API.Repositories.Implementations
@@ -26,23 +25,13 @@ namespace Blog_API.Repositories.Implementations
             await _context.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyCollection<BlogPost>> GetAllAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true)
+        public async Task<(IReadOnlyCollection<BlogPost> blogPosts, int totalCount)> GetAllAsync(PaginationRequest paginationRequest, string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true)
         {
             var query = _context.BlogPosts
                 .AsNoTracking()
-                .Include(bp => bp.User)
-                .Include(bp => bp.Likes)
-                .Include(bp => bp.Tags) // Include tags for many-to-many relationship
-                .Include(c => c.Comments.Where(c => c.ParentCommentId == null))
-                    .ThenInclude(c => c.User)
-                .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
-                    .ThenInclude(c => c.Likes)
-                    .ThenInclude(l => l.User)
-                .Include(c => c.Comments
-                    .Where(c => c.ParentCommentId == null))
-                    .ThenInclude(c => c.Replies)
-                    .ThenInclude(u => u.User)
                 .AsQueryable();
+
+            // Filtering
 
             if (!string.IsNullOrWhiteSpace(filterOn) && !string.IsNullOrWhiteSpace(filterQuery))
             {
@@ -52,6 +41,8 @@ namespace Blog_API.Repositories.Implementations
                 }
             }
 
+            // Sorting
+
             if (!string.IsNullOrWhiteSpace(sortBy))
             {
                 if (sortBy.Equals("CreatedAt", StringComparison.OrdinalIgnoreCase))
@@ -60,7 +51,16 @@ namespace Blog_API.Repositories.Implementations
                 }
             }
 
-            return await query.ToListAsync();
+            // Pagination
+            var totalCount = await query.CountAsync();
+
+            var BlogPosts = await query
+                .Skip((paginationRequest.PageNumber - 1) * paginationRequest.PageSize)
+                .Take(paginationRequest.PageSize)
+                .Include(bp => bp.User)
+                .ToListAsync();
+
+            return (BlogPosts, totalCount);
         }
 
         public async Task<(IReadOnlyCollection<BlogPost> blogPosts, int totalCount)> GetBlogPostsByCategoryAsync(BlogCategory blogCategory, PaginationRequest paginationRequest)
@@ -78,10 +78,6 @@ namespace Blog_API.Repositories.Implementations
                 .Skip((paginationRequest.PageNumber - 1) * paginationRequest.PageSize)
                 .Take(paginationRequest.PageSize)
                 .Include(bp => bp.User)
-                .Include(bp => bp.Tags)
-                .Include(bp => bp.Likes)
-                .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
-                    .ThenInclude(c => c.User)
                 .ToListAsync();
 
             return (blogPosts, totalCount);
@@ -93,9 +89,11 @@ namespace Blog_API.Repositories.Implementations
                 .Include(bp => bp.Likes)
                 .Include(bp => bp.Tags) // Include tags for many-to-many relationship
                 .Include(c => c.Comments.Where(c=> c.ParentCommentId == null))
+                    .ThenInclude(c => c.Likes)
                     .ThenInclude(c => c.User)
                 .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
-                    .ThenInclude(c => c.Likes)
+                    .ThenInclude(c => c.Replies)
+                    .ThenInclude(r => r.Likes)
                     .ThenInclude(r => r.User)
                 .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
                     .ThenInclude(c => c.Replies)

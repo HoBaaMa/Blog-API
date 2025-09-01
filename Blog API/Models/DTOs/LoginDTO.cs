@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Blog_API.Models.Entities
+namespace Blog_API.Models.DTOs
 {
-    public class Login
+    public class LoginDTO
     {
         [Required(ErrorMessage = "{0} is required.")]
         public string UserName { get; set; } = string.Empty;

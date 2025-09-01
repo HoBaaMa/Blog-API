@@ -3,13 +3,12 @@ using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Blog_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CommentsController : ControllerBase
+    public class CommentsController : BaseApiController
     {
         private readonly ICommentService _commentService;
         private readonly ILogger<CommentsController> _logger;
@@ -20,10 +19,10 @@ namespace Blog_API.Controllers
         }
         
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<IActionResult> CreateComment([FromBody] CreateCommentDTO commentDTO)
         {
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var currentUserId = GetCurrentUserId();
             _logger.LogInformation("API request to create comment by user {UserId} for blog post {BlogPostId}", 
                 currentUserId, commentDTO.BlogPostId);
 
@@ -56,10 +55,10 @@ namespace Blog_API.Controllers
         }
 
         [HttpPatch("{id:guid}")]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<IActionResult> UpdateComment(Guid id, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc)
         {
-            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            var currentUserId = GetCurrentUserId();
             _logger.LogInformation("API request to update comment {CommentId} by user {UserId}", id, currentUserId);
 
             var updatedComment = await _commentService.UpdateCommentAsync(id, patchDoc, currentUserId);
@@ -69,10 +68,10 @@ namespace Blog_API.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<IActionResult> DeleteComment(Guid id)
         {
-            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            var currentUserId = GetCurrentUserId();
             _logger.LogInformation("API request to delete comment {CommentId} by user {UserId}", id, currentUserId);
 
             await _commentService.DeleteCommentAsync(id, currentUserId);
