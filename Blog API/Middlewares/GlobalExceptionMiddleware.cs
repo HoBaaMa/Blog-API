@@ -38,6 +38,7 @@ namespace Blog_API.Middlewares
         /// - KeyNotFoundException => uses the exception message, 404 Not Found
         /// - UnauthorizedAccessException => "Access denied", 403 Forbidden
         /// - ArgumentException => "Invalid request.", 400 Bad Request
+        /// - InvalidOperationException => uses the exception message, 400 Bad Request
         /// - default => "Internal server error", 500 Internal Server Error
         /// The response body is written as JSON. The response Content-Type is not set by this method.
         /// </remarks>
@@ -50,6 +51,7 @@ namespace Blog_API.Middlewares
                 KeyNotFoundException => (exception.Message, 404),
                 UnauthorizedAccessException => ("Access denied", 403),
                 ArgumentException => ("Invalid request.", 400),
+                InvalidOperationException => (exception.Message, 400),
                 _ => ("Internal server error", 500)
             };
             context.Response.StatusCode = statusCode;

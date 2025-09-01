@@ -2,13 +2,12 @@
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Blog_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class LikesController : ControllerBase
+    public class LikesController : BaseApiController
     {
         private readonly ILikeService _likeService;
         private readonly ILogger<LikesController> _logger;
@@ -25,19 +24,15 @@ namespace Blog_API.Controllers
         /// <param name="createLikeDTO">Like data specifying either blog post ID or comment ID</param>
         /// <returns>Result indicating whether item was liked or unliked</returns>
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<IActionResult> ToggleLike([FromBody] CreateLikeDTO createLikeDTO)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var target = createLikeDTO.BlogPostId.HasValue ? $"blog post {createLikeDTO.BlogPostId}" : $"comment {createLikeDTO.CommentId}";
-            
-            _logger.LogInformation("API request to toggle like by user {UserId} on {Target}", userId, target);
-
+            var userId = GetCurrentUserId();
+            _logger.LogInformation("API request to toggle like by user {UserId}", userId);
 
             bool likeResult = await _likeService.ToggleLikeAsync(userId, createLikeDTO.BlogPostId, createLikeDTO.CommentId);
             
             var action = likeResult ? "liked" : "unliked";
-            _logger.LogInformation("User {UserId} successfully {Action} {Target} via API", userId, action, target);
             
             return Ok(new { message = likeResult ? "Liked." : "Unliked." });
         }
@@ -51,10 +46,8 @@ namespace Blog_API.Controllers
         public async Task<IActionResult> GetAllLikesByBlogPostId(Guid blogPostId)
         {
             _logger.LogInformation("API request to get all likes for blog post {BlogPostId}", blogPostId);
-            
             var likes = await _likeService.GetAllLikesByBlogPostIdAsync(blogPostId);
             
-            _logger.LogInformation("Successfully retrieved likes for blog post {BlogPostId} via API", blogPostId);
             return Ok(likes);
         }
 
@@ -67,10 +60,8 @@ namespace Blog_API.Controllers
         public async Task<IActionResult> GetAllLikesByCommentId(Guid commentId)
         {
             _logger.LogInformation("API request to get all likes for comment {CommentId}", commentId);
-            
             var likes = await _likeService.GetAllLikesByCommentIdAsync(commentId);
             
-            _logger.LogInformation("Successfully retrieved likes for comment {CommentId} via API", commentId);
             return Ok(likes);
         }
     }

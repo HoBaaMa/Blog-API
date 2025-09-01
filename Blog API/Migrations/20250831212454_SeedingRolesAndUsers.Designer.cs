@@ -4,6 +4,7 @@ using Blog_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Blog_API.Migrations
 {
     [DbContext(typeof(BlogDbContext))]
-    partial class BlogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250831212454_SeedingRolesAndUsers")]
+    partial class SeedingRolesAndUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,7 +37,7 @@ namespace Blog_API.Migrations
 
                     b.HasIndex("TagsId");
 
-                    b.ToTable("BlogPostTag", (string)null);
+                    b.ToTable("BlogPostTag");
                 });
 
             modelBuilder.Entity("Blog_API.Models.Entities.ApplicationUser", b =>
@@ -182,7 +185,7 @@ namespace Blog_API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("BlogPosts", (string)null);
+                    b.ToTable("BlogPosts");
                 });
 
             modelBuilder.Entity("Blog_API.Models.Entities.Comment", b =>
@@ -218,7 +221,7 @@ namespace Blog_API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comments", (string)null);
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("Blog_API.Models.Entities.Like", b =>
@@ -256,7 +259,7 @@ namespace Blog_API.Migrations
                         .IsUnique()
                         .HasFilter("[CommentId] IS NOT NULL");
 
-                    b.ToTable("Likes", (string)null);
+                    b.ToTable("Likes");
                 });
 
             modelBuilder.Entity("Blog_API.Models.Entities.Tag", b =>
@@ -271,7 +274,7 @@ namespace Blog_API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tags", (string)null);
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

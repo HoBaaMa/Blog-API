@@ -1,4 +1,4 @@
-﻿using Blog_API.Models.Entities;
+﻿using Blog_API.Models.DTOs;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,87 +11,55 @@ namespace Blog_API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
+        
         public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
-            _authService = authService;
-            _logger = logger;
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(Register register)
+        public async Task<IActionResult> Register(RegisterDTO register)
         {
-            _logger.LogInformation("Attempting to register a new user.");
-            if (register == null)
+            _logger.LogInformation("API registration request received for username: {UserName}", register?.UserName ?? "null");
+            
+            var result = await _authService.RegisterAsync(register);
+            if (result)
             {
-                _logger.LogWarning("Registration attempt with null data.");
-                return BadRequest("Invalid registration data.");
+                _logger.LogInformation("User registration successful via API for username: {UserName}", register.UserName);
+                return Ok(new { Message = "Registration successful. User has been assigned User role.", UserName = register.UserName });
             }
-            try
-            {
-                var result = await _authService.RegisterAsync(register);
-                if (result) 
-                
-                {
-                    _logger.LogInformation($"User registration successful. User Name: {register.UserName}");
-                    return Ok("Registration successful.");
-                }
-                else
-                {
-                    _logger.LogWarning("User registration failed. Invalid data or user already exists.");
-                    return BadRequest("Registration failed. Please check your data or if the user already exists.");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log the exception (not shown here for brevity)
-                _logger.LogError(ex, "An error occurred during user registration.");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
+            
+            _logger.LogWarning("Registration failed via API for username: {UserName} - unexpected false result", register.UserName);
+            return BadRequest(new { Message = "Registration failed for unknown reason" });
         }
+
         [HttpPost("login")]
-        public async Task<IActionResult> Login(Login login)
+        public async Task<IActionResult> Login(LoginDTO login)
         {
-            _logger.LogInformation("Attempting to log in a user.");
-            if (login == null)
+            _logger.LogInformation("API login request received for username: {UserName}", login?.UserName ?? "null");
+            
+            var token = await _authService.LoginAsync(login);
+            if (string.IsNullOrEmpty(token))
             {
-                _logger.LogWarning("Login attempt with null data.");
-                return BadRequest("Invalid login data.");
+                _logger.LogWarning("Login failed via API for username: {UserName} - invalid credentials", login.UserName);
+                return Unauthorized(new { Message = "Login failed. Please check your credentials." });
             }
-            try
-            {
-                var result = await _authService.LoginAsync(login);
-                if (!result)
-                {
-                    _logger.LogWarning("Login failed. Invalid credentials.");
-                    return Unauthorized("Login failed. Please check your credentials.");
-                }
-                _logger.LogInformation($"User login successful. User Name: {login.UserName}");
-                return Ok("Login successful.");
-            }
-            catch (Exception ex)
-            {
-                // Log the exception (not shown here for brevity)
-                _logger.LogError(ex, "An error occurred during user login.");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
+            
+            _logger.LogInformation("User login successful via API for username: {UserName}", login.UserName);
+            return Ok(new { Token = token, Message = "Login successful", UserName = login.UserName });
         }
+
         [HttpPost("logout")]
-        [Authorize]
+        [Authorize(Roles = "Admin, User")]
         public async Task<IActionResult> Logout()
         {
-            _logger.LogInformation("Attempting to log out a user.");
-            try
-            {
-                await _authService.LogoutAsync();
-                _logger.LogInformation("User logout successful.");
-                return Ok("Logout successful.");
-            }
-            catch (Exception ex)
-            {
-                // Log the exception (not shown here for brevity)
-                _logger.LogError(ex, "An error occurred during user login.");
-                return StatusCode(500, "Internal server error: " + ex.Message);
-            }
+            var userName = User.Identity?.Name ?? "Unknown";
+            _logger.LogInformation("API logout request received for user: {UserName}", userName);
+            
+            await _authService.LogoutAsync();
+            _logger.LogInformation("User logout successful via API for user: {UserName}", userName);
+            return Ok(new { Message = "Logout successful", UserName = userName });
         }
     }
 }

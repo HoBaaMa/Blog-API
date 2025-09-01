@@ -2,13 +2,12 @@ using Blog_API.Models.DTOs;
 using Blog_API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Blog_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class BlogPostsController : ControllerBase
+    public class BlogPostsController : BaseApiController
     {
         private readonly IBlogPostService _blogPostService;
         private readonly ILogger<BlogPostsController> _logger;
@@ -23,10 +22,10 @@ namespace Blog_API.Controllers
         /// </summary>
         /// <returns>An <see cref="IActionResult"/> containing a 200 OK response with the collection of blog posts.</returns>
         [HttpGet]
-        public async Task<IActionResult> GetAllBlogPosts([FromQuery] string? filterOn,[FromQuery] string? filterQuery, [FromQuery] string? sortBy, [FromQuery] bool? isAscending = true)
+        public async Task<IActionResult> GetAllBlogPosts([FromQuery] PaginationRequest paginationRequest, [FromQuery] string? filterOn,[FromQuery] string? filterQuery, [FromQuery] string? sortBy, [FromQuery] bool? isAscending = true)
         {
             _logger.LogInformation("API request to get all blog posts");
-            var blogPosts = await _blogPostService.GetAllBlogPostsAsync(filterOn, filterQuery, sortBy, isAscending);
+            var blogPosts = await _blogPostService.GetAllBlogPostsAsync(paginationRequest,filterOn, filterQuery, sortBy, isAscending);
             return Ok(blogPosts);
         }
 
@@ -38,10 +37,10 @@ namespace Blog_API.Controllers
         /// 201 Created with the created blog post in the response body and a Location header pointing to <see cref="GetBlogPostById(Guid)"/>.
         /// </returns>
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBlogPost([FromBody] CreateBlogPostDTO blogPostDTO)
         {
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var currentUserId = GetCurrentUserId();
             _logger.LogInformation("API request to create blog post by user {UserId} with {ImageCount} images", 
                 currentUserId, blogPostDTO.ImageUrls?.Count ?? 0);
             
@@ -71,21 +70,22 @@ namespace Blog_API.Controllers
         /// <param name="blogPostDTO">The blog post data to apply (from request body).</param>
         /// <returns>200 OK with the updated blog post model.</returns>
         [HttpPut("{id:guid}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBlogPost(Guid id, [FromBody] CreateBlogPostDTO blogPostDTO)
         {
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var currentUserId = GetCurrentUserId();
             _logger.LogInformation("API request to update blog post {BlogPostId} by user {UserId} with {ImageCount} images", 
                 id, currentUserId, blogPostDTO.ImageUrls?.Count ?? 0);
             
             var updatedBlogPost = await _blogPostService.UpdateBlogPostAsync(id, blogPostDTO, currentUserId);
             return Ok(updatedBlogPost);
         }
+
         [HttpDelete("{id:guid}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBlogPost(Guid id)
         {
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var currentUserId = GetCurrentUserId();
             _logger.LogInformation("API request to delete blog post {BlogPostId} by user {UserId}", id, currentUserId);
             
             await _blogPostService.DeleteBlogPostAsync(id, currentUserId);

@@ -124,17 +124,25 @@ namespace Blog_API.Services.Implementation
             }
         }
 
-        public async Task<IReadOnlyCollection<BlogPostDTO>> GetAllBlogPostsAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true)
+        public async Task<PagedResult<BlogPostDTO>> GetAllBlogPostsAsync(PaginationRequest paginationRequest, string? filterOn, string? filterQuery, string? sortBy, bool? isAscending = true)
         {
             _logger.LogInformation("Retrieving all blog posts");
 
             try
             {
-                var blogPosts = await _blogPostRepository.GetAllAsync(filterOn, filterQuery, sortBy, isAscending);
-                _logger.LogInformation("Retrieved {BlogPostCount} blog posts", blogPosts.Count);
+                var (blogPosts, totalCount) = await _blogPostRepository.GetAllAsync(paginationRequest, filterOn, filterQuery, sortBy, isAscending);
+                _logger.LogInformation("Retrieved {BlogPostCount} blog posts", blogPosts.Count());
 
 
-                return _mapper.Map<IReadOnlyCollection<BlogPostDTO>>(blogPosts);
+                var blogPostDTOs = _mapper.Map<IReadOnlyCollection<BlogPostDTO>>(blogPosts);
+
+                return new PagedResult<BlogPostDTO>
+                {
+                    Data = blogPostDTOs,
+                    TotalCount = totalCount,
+                    PageNumber = paginationRequest.PageNumber,
+                    PageSize = paginationRequest.PageSize
+                };
             }
             catch (Exception ex)
             {
