@@ -4,6 +4,9 @@ namespace Blog_API.Middlewares
     {
         private readonly RequestDelegate _next;
         private ILogger<GlobalExceptionMiddleware> _logger;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="GlobalExceptionMiddleware"/> with the next middleware delegate and a logger.
         /// <summary>
         /// Initializes a new instance of <see cref="GlobalExceptionMiddleware"/> with the next middleware delegate and a logger.
         /// </summary>
@@ -12,9 +15,10 @@ namespace Blog_API.Middlewares
             _next = next;
             _logger = logger;
         }
+
         /// <summary>
         /// Invokes the next middleware in the pipeline and provides global exception handling for the request.
-        /// If an exception is thrown by downstream middleware, the exception is logged and handled so an appropriate HTTP response is produced.
+        /// If a downstream middleware throws, the exception is logged and handled by <see cref="HandleExceptionAsync(HttpContext, Exception)"/>.
         /// </summary>
         /// <param name="context">The current HTTP context for the request.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
@@ -30,17 +34,21 @@ namespace Blog_API.Middlewares
                 await HandleExceptionAsync(context, ex);
             }
         }
+
         /// <summary>
-        /// Maps an exception to an HTTP status code and JSON message, sets the response status, and writes the message to the response body.
+        /// Maps an exception to an HTTP status code and writes a JSON response message to the given <see cref="HttpContext.Response"/>.
         /// </summary>
+        /// <param name="context">The current HTTP context whose response will be written.</param>
+        /// <param name="exception">The exception to translate into an HTTP status and message.</param>
+        /// <returns>A task that completes when the response has been written.</returns>
         /// <remarks>
-        /// Exception-to-response mapping:
-        /// - KeyNotFoundException => uses the exception message, 404 Not Found
-        /// - UnauthorizedAccessException => "Access denied", 403 Forbidden
-        /// - ArgumentException => "Invalid request.", 400 Bad Request
-        /// - InvalidOperationException => uses the exception message, 400 Bad Request
-        /// - default => "Internal server error", 500 Internal Server Error
-        /// The response body is written as JSON. The response Content-Type is not set by this method.
+        /// Exception-to-status mapping:
+        /// - <see cref="KeyNotFoundException"/> => 404, returns the exception's message.
+        /// - <see cref="UnauthorizedAccessException"/> => 403, message "Access denied".
+        /// - <see cref="ArgumentException"/> => 400, message "Invalid request.".
+        /// - <see cref="InvalidOperationException">=> 400, returns the exception's message</see>
+        /// - all other exceptions => 500, message "Internal server error".
+        /// The method sets <see cref="HttpResponse.StatusCode"/> and writes the message as JSON.
         /// </remarks>
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
