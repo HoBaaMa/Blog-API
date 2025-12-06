@@ -1,5 +1,7 @@
 using Blog_API.Configurations;
 using Blog_API.Middlewares;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseConfiguredSerilog();
@@ -17,6 +19,10 @@ builder.Services
     .AddApplicationServices()
     .AddRepositories()
     .AddUtilities()
+    .AddCorsServices(builder.Configuration)
+    .AddRateLimitingServices(builder.Configuration)
+    .AddHealthCheckServices()
+    .AddResponseCachingServices()
     .AddAutoMapper(typeof(Program).Assembly);
 
 var app = builder.Build();
@@ -29,12 +35,39 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseHttpsRedirection();
+
+// Response compression should be early in the pipeline
+app.UseResponseCompression();
+
 app.UseRouting();
 
-// Authentication middleware order is critical
+// Security middleware order is critical
+app.UseRateLimiter();
+app.UseCors(CorsConfiguration.DefaultPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Response caching after auth
+app.UseResponseCaching();
+
 app.MapControllers();
+
+// Health check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("db"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("api"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 app.Run();
