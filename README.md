@@ -7,6 +7,7 @@ A production-ready ASP.NET Core 8 Web API for a blog platform, featuring posts, 
 ![Entity Framework Core](https://img.shields.io/badge/EF%20Core-8.0-512BD4?logo=dotnet)
 ![SQL Server](https://img.shields.io/badge/SQL%20Server-2019+-CC2927?logo=microsoftsqlserver)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-blog--restapi.runasp.net-brightgreen?style=for-the-badge)](http://blog-restapi.runasp.net)
 
 ---
 
