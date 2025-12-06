@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Blog_API.Models.Entities
+﻿namespace Blog_API.Models.Entities
 {
     public class BlogPost
     {
@@ -13,7 +11,8 @@ namespace Blog_API.Models.Entities
         public ApplicationUser? User { get; set; } 
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
         public ICollection<Like> Likes { get; set; } = new List<Like>();
-        public BlogCategory BlogCategory { get; set; }
+        public Guid BlogCategoryId { get; set; }
+        public BlogCategory? BlogCategory { get; set; } 
         public ICollection<Tag> Tags { get; set; } = new List<Tag>();
         public ICollection<string> ImageUrls { get; set; } = new List<string>();
         //public string Slug { get; set; } = default!;

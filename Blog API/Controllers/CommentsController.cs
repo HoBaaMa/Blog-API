@@ -6,8 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Blog_API.Controllers
 {
+    /// <summary>
+    /// Controller for managing comments on blog posts.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Produces("application/json")]
     public class CommentsController : BaseApiController
     {
         private readonly ICommentService _commentService;
@@ -17,9 +21,19 @@ namespace Blog_API.Controllers
             _commentService = commentService ?? throw new ArgumentNullException(nameof(commentService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
-        
+
+        /// <summary>
+        /// Creates a new comment on a blog post.
+        /// </summary>
+        /// <param name="commentDTO">The comment data.</param>
+        /// <returns>The created comment with a Location header.</returns>
         [HttpPost]
         [Authorize(Roles = "Admin, User")]
+        [Consumes("application/json")]
+        [ProducesResponseType(typeof(CommentDTO), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CreateComment([FromBody] CreateCommentDTO commentDTO)
         {
             var currentUserId = GetCurrentUserId();
@@ -32,7 +46,14 @@ namespace Blog_API.Controllers
             return CreatedAtAction(nameof(GetCommentById), new { id = createdComment.Id }, createdComment);
         }
 
+        /// <summary>
+        /// Retrieves all comments for a specific blog post.
+        /// </summary>
+        /// <param name="id">The blog post ID.</param>
+        /// <returns>Collection of comments for the blog post.</returns>
         [HttpGet("blogpost/{id:guid}")]
+        [ProducesResponseType(typeof(IEnumerable<CommentDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetAllCommentsForBlogPost(Guid id)
         {
             _logger.LogInformation("API request to get all comments for blog post {BlogPostId}", id);
@@ -43,7 +64,14 @@ namespace Blog_API.Controllers
             return Ok(comments);
         }
 
+        /// <summary>
+        /// Retrieves a comment by its unique identifier.
+        /// </summary>
+        /// <param name="id">The comment ID.</param>
+        /// <returns>The comment if found.</returns>
         [HttpGet("{id:guid}")]
+        [ProducesResponseType(typeof(CommentDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetCommentById(Guid id)
         {
             _logger.LogInformation("API request to get comment {CommentId}", id);
@@ -54,8 +82,20 @@ namespace Blog_API.Controllers
             return Ok(comment);
         }
 
+        /// <summary>
+        /// Partially updates a comment using JSON Patch.
+        /// </summary>
+        /// <param name="id">The comment ID to update.</param>
+        /// <param name="patchDoc">The JSON Patch document with updates.</param>
+        /// <returns>The updated comment.</returns>
         [HttpPatch("{id:guid}")]
         [Authorize(Roles = "Admin, User")]
+        [Consumes("application/json-patch+json")]
+        [ProducesResponseType(typeof(CommentDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateComment(Guid id, [FromBody] JsonPatchDocument<UpdateCommentDTO> patchDoc)
         {
             var currentUserId = GetCurrentUserId();
@@ -67,8 +107,17 @@ namespace Blog_API.Controllers
             return Ok(updatedComment);
         }
 
+        /// <summary>
+        /// Deletes a comment.
+        /// </summary>
+        /// <param name="id">The comment ID to delete.</param>
+        /// <returns>No content on success.</returns>
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = "Admin, User")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteComment(Guid id)
         {
             var currentUserId = GetCurrentUserId();
@@ -81,3 +130,4 @@ namespace Blog_API.Controllers
         }
     }
 }
+

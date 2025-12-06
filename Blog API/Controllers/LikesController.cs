@@ -5,8 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Blog_API.Controllers
 {
+    /// <summary>
+    /// Controller for managing likes on blog posts and comments.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Produces("application/json")]
     public class LikesController : BaseApiController
     {
         private readonly ILikeService _likeService;
@@ -19,12 +23,17 @@ namespace Blog_API.Controllers
         }
 
         /// <summary>
-        /// Toggles like/unlike on a blog post or comment
+        /// Toggles like/unlike on a blog post or comment.
         /// </summary>
-        /// <param name="createLikeDTO">Like data specifying either blog post ID or comment ID</param>
-        /// <returns>Result indicating whether item was liked or unliked</returns>
+        /// <param name="createLikeDTO">Like data specifying either blog post ID or comment ID.</param>
+        /// <returns>Result indicating whether item was liked or unliked.</returns>
         [HttpPost]
         [Authorize(Roles = "Admin, User")]
+        [Consumes("application/json")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> ToggleLike([FromBody] CreateLikeDTO createLikeDTO)
         {
             var userId = GetCurrentUserId();
@@ -32,17 +41,17 @@ namespace Blog_API.Controllers
 
             bool likeResult = await _likeService.ToggleLikeAsync(userId, createLikeDTO.BlogPostId, createLikeDTO.CommentId);
             
-            var action = likeResult ? "liked" : "unliked";
-            
             return Ok(new { message = likeResult ? "Liked." : "Unliked." });
         }
 
         /// <summary>
-        /// Retrieves all likes for a specific blog post
+        /// Retrieves all likes for a specific blog post.
         /// </summary>
-        /// <param name="blogPostId">Blog post ID</param>
-        /// <returns>Collection of likes for the blog post</returns>
+        /// <param name="blogPostId">Blog post ID.</param>
+        /// <returns>Collection of likes for the blog post.</returns>
         [HttpGet("blogpost")]
+        [ProducesResponseType(typeof(IEnumerable<LikeDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetAllLikesByBlogPostId(Guid blogPostId)
         {
             _logger.LogInformation("API request to get all likes for blog post {BlogPostId}", blogPostId);
@@ -52,11 +61,13 @@ namespace Blog_API.Controllers
         }
 
         /// <summary>
-        /// Retrieves all likes for a specific comment
+        /// Retrieves all likes for a specific comment.
         /// </summary>
-        /// <param name="commentId">Comment ID</param>
-        /// <returns>Collection of likes for the comment</returns>
+        /// <param name="commentId">Comment ID.</param>
+        /// <returns>Collection of likes for the comment.</returns>
         [HttpGet("comment")]
+        [ProducesResponseType(typeof(IEnumerable<LikeDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetAllLikesByCommentId(Guid commentId)
         {
             _logger.LogInformation("API request to get all likes for comment {CommentId}", commentId);
@@ -66,3 +77,4 @@ namespace Blog_API.Controllers
         }
     }
 }
+

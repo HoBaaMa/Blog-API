@@ -11,86 +11,88 @@ namespace Blog_API.Services.Implementation
     {
         private readonly IBlogPostRepository _blogPostRepository;
         private readonly ITagRepository _tagRepository;
+        private readonly ICategoryRepository _categoryRepository;
         private readonly IMapper _mapper;
         private readonly ILogger<BlogPostService> _logger;
 
-        public BlogPostService(IMapper mapper, IBlogPostRepository blogPostRepository, ITagRepository tagRepository, ILogger<BlogPostService> logger)
+        public BlogPostService(IMapper mapper, IBlogPostRepository blogPostRepository, ITagRepository tagRepository,  ICategoryRepository categoryRepository, ILogger<BlogPostService> logger)
         {
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _blogPostRepository = blogPostRepository ?? throw new ArgumentNullException(nameof(blogPostRepository));
             _tagRepository = tagRepository ?? throw new ArgumentNullException(nameof(tagRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _categoryRepository = categoryRepository ?? throw new ArgumentException(nameof(categoryRepository));
         }
 
         public async Task<BlogPostDTO> CreateBlogPostAsync(CreateBlogPostDTO createBlogPostDTO, string userId)
         {
             _logger.LogInformation("Creating blog post for user {UserId} with title '{Title}'", userId, createBlogPostDTO.Title);
 
-            try
+            // TODO: Create get a category by name
+
+            if (!await _categoryRepository.IsCategoryExistsAsync(createBlogPostDTO.CategoryName))
             {
-                var blogPost = _mapper.Map<BlogPost>(createBlogPostDTO);
-                blogPost.UserId = userId;
+                throw new KeyNotFoundException($"Blog Category Name: {createBlogPostDTO.CategoryName} not found.");
+            }
 
-                // Handle images validation and processing
-                if (createBlogPostDTO.ImageUrls?.Any() == true)
+            var blogPost = _mapper.Map<BlogPost>(createBlogPostDTO);
+            blogPost.UserId = userId;
+            blogPost.BlogCategory = new BlogCategory { Name = createBlogPostDTO.CategoryName };
+
+            // Handle images validation and processing
+            if (createBlogPostDTO.ImageUrls?.Any() == true)
+            {
+                _logger.LogDebug("Processing {ImageCount} images for blog post", createBlogPostDTO.ImageUrls.Count);
+
+                // Validate image URLs
+                var (isValid, invalidUrls) = ImageUrlValidator.ValidateImageUrls(createBlogPostDTO.ImageUrls);
+                if (!isValid)
                 {
-                    _logger.LogDebug("Processing {ImageCount} images for blog post", createBlogPostDTO.ImageUrls.Count);
-
-                    // Validate image URLs
-                    var (isValid, invalidUrls) = ImageUrlValidator.ValidateImageUrls(createBlogPostDTO.ImageUrls);
-                    if (!isValid)
-                    {
-                        _logger.LogWarning("Invalid image URLs provided: {InvalidUrls}", string.Join(", ", invalidUrls));
-                        throw new ArgumentException($"Invalid image URLs: {string.Join(", ", invalidUrls)}");
-                    }
-
-                    // Remove duplicates and empty URLs
-                    var validImageUrls = createBlogPostDTO.ImageUrls
-                        .Where(url => !string.IsNullOrWhiteSpace(url))
-                        .Distinct()
-                        .ToList();
-
-                    blogPost.ImageUrls = validImageUrls;
-                    _logger.LogDebug("Added {ValidImageCount} valid images to blog post", validImageUrls.Count);
+                    _logger.LogWarning("Invalid image URLs provided: {InvalidUrls}", string.Join(", ", invalidUrls));
+                    throw new ArgumentException($"Invalid image URLs: {string.Join(", ", invalidUrls)}");
                 }
 
-                // Handle tags - create or find existing tags and associate them with the blog post
-                if (createBlogPostDTO.Tags?.Any() == true)
-                {
-                    _logger.LogDebug("Processing {TagCount} tags for blog post", createBlogPostDTO.Tags.Count);
+                // Remove duplicates and empty URLs
+                var validImageUrls = createBlogPostDTO.ImageUrls
+                    .Where(url => !string.IsNullOrWhiteSpace(url))
+                    .Distinct()
+                    .ToList();
 
-                    var tagsToAssociate = new List<Tag>();
-                    foreach (var tagName in createBlogPostDTO.Tags)
-                    {
-                        var tag = await _tagRepository.GetTagByNameAsync(tagName);
-
-                        if (tag == null)
-                        {
-                            _logger.LogDebug("Creating new tag: {TagName}", tagName);
-                            tag = new Tag { Id = Guid.NewGuid(), Name = tagName };
-                            await _tagRepository.AddAsync(tag);
-                        }
-                        else
-                        {
-                            _logger.LogDebug("Using existing tag: {TagName}", tagName);
-                        }
-                        tagsToAssociate.Add(tag);
-                    }
-                    blogPost.Tags = tagsToAssociate;
-                }
-
-                await _blogPostRepository.AddAsync(blogPost);
-                _logger.LogInformation("Blog post created successfully with ID {BlogPostId} for user {UserId}", blogPost.Id, userId);
-
-                // Get the created blog post with all related data
-                var createdBlogPost = await _blogPostRepository.GetByIdAsync(blogPost.Id);
-                return _mapper.Map<BlogPostDTO>(createdBlogPost);
+                blogPost.ImageUrls = validImageUrls;
+                _logger.LogDebug("Added {ValidImageCount} valid images to blog post", validImageUrls.Count);
             }
-            catch (Exception ex)
+
+            // Handle tags - create or find existing tags and associate them with the blog post
+            if (createBlogPostDTO.Tags?.Any() == true)
             {
-                _logger.LogError(ex, "Error creating blog post for user {UserId} with title '{Title}'", userId, createBlogPostDTO.Title);
-                throw;
+                _logger.LogDebug("Processing {TagCount} tags for blog post", createBlogPostDTO.Tags.Count);
+
+                var tagsToAssociate = new List<Tag>();
+                foreach (var tagName in createBlogPostDTO.Tags)
+                {
+                    var tag = await _tagRepository.GetTagByNameAsync(tagName);
+
+                    if (tag == null)
+                    {
+                        _logger.LogDebug("Creating new tag: {TagName}", tagName);
+                        tag = new Tag { Id = Guid.NewGuid(), Name = tagName };
+                        await _tagRepository.AddAsync(tag);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Using existing tag: {TagName}", tagName);
+                    }
+                    tagsToAssociate.Add(tag);
+                }
+                blogPost.Tags = tagsToAssociate;
             }
+
+            await _blogPostRepository.AddAsync(blogPost);
+            _logger.LogInformation("Blog post created successfully with ID {BlogPostId} for user {UserId}", blogPost.Id, userId);
+
+            // Get the created blog post with all related data
+            var createdBlogPost = await _blogPostRepository.GetByIdAsync(blogPost.Id);
+            return _mapper.Map<BlogPostDTO>(createdBlogPost);
         }
 
         public async Task DeleteBlogPostAsync(Guid id, string currentUserId)
@@ -232,7 +234,7 @@ namespace Blog_API.Services.Implementation
                 // 3. Update basic properties manually to avoid AutoMapper conflicts
                 existingBlogPost.Title = blogPostDTO.Title;
                 existingBlogPost.Content = blogPostDTO.Content;
-                existingBlogPost.BlogCategory = blogPostDTO.BlogCategory;
+                //existingBlogPost.BlogCategory = blogPostDTO.BlogCategory;
                 existingBlogPost.UpdatedAt = DateTime.UtcNow;
 
                 // 4. Handle images

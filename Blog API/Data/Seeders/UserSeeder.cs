@@ -8,7 +8,7 @@ namespace Blog_API.Data.Seeders
     {
         public static void SeedUsers(ModelBuilder modelBuilder)
         {
-            var hasher = new PasswordHasher<ApplicationUser>();
+            //var hasher = new PasswordHasher<ApplicationUser>();
             var adminUser = new ApplicationUser
             {
                 Id = "D19A77BA-2F5E-4A95-A29F-32B5FF1C54E2",
@@ -18,9 +18,10 @@ namespace Blog_API.Data.Seeders
                 NormalizedEmail = "ADMIN@XVIBES.COM",
                 EmailConfirmed = true,
                 UserName = "Admin",
-                NormalizedUserName = "ADMIN" 
+                NormalizedUserName = "ADMIN",
+                PasswordHash = "AQAAAAIAAYagAAAAEP7Q1CbK9lF5dTD+pwqljzNdGxiJ1Rf6sxyCCba4OFNoZ4WR2TR4H4iIQUxViG8yRA=="
             };
-            adminUser.PasswordHash = hasher.HashPassword(adminUser, "XVibesAdmin");
+            //adminUser.PasswordHash = hasher.HashPassword(adminUser, "XVibesAdmin");
 
             modelBuilder.Entity<ApplicationUser>().HasData(adminUser);
             modelBuilder.Entity<IdentityUserRole<string>>().HasData(
@@ -39,10 +40,11 @@ namespace Blog_API.Data.Seeders
                 NormalizedEmail = "USER@GMAIL.COM", 
                 EmailConfirmed = true,
                 UserName = "Default User",
-                NormalizedUserName = "DEFAULT USER"
+                NormalizedUserName = "DEFAULT USER",
+                PasswordHash = "AQAAAAIAAYagAAAAEBKxyIbI8dextG2jFrzngwYaxw2fMlNfVQZEGnh7iE3BP2QFctZWUsvGkQiYLE3hLQ=="
             };
 
-            defaultUser.PasswordHash = hasher.HashPassword(defaultUser, "XVibesDUser");
+            //defaultUser.PasswordHash = hasher.HashPassword(defaultUser, "XVibesDUser");
 
             modelBuilder.Entity<ApplicationUser>().HasData(defaultUser);
             modelBuilder.Entity<IdentityUserRole<string>>().HasData(

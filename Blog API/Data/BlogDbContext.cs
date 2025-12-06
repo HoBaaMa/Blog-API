@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Blog_API.Models.Entities;
 using Blog_API.Data.Seeders;
-
 namespace Blog_API.Data
 {
     public class BlogDbContext : IdentityDbContext<ApplicationUser>
@@ -15,6 +14,7 @@ namespace Blog_API.Data
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Like> Likes { get; set; }
         public DbSet<Tag> Tags { get; set; }
+        public DbSet<BlogCategory> BlogCategories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -46,15 +46,16 @@ namespace Blog_API.Data
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-                e.Property(e => e.BlogCategory)
-                .HasConversion<string>();
-
                 e.Property(e => e.ImageUrls)
                 .HasConversion(
                     v => string.Join(';', v), // Convert list to string
                     v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()) // Convert string to list
                 .HasColumnName("ImageUrls");
 
+                e.HasOne(e => e.BlogCategory)
+                .WithMany()
+                .HasForeignKey(e => e.BlogCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
             });
             modelBuilder.Entity<Comment>(e =>
             {
@@ -121,12 +122,26 @@ namespace Blog_API.Data
                 //.IsRequired();
             });
 
+            modelBuilder.Entity<BlogCategory>(bc =>
+            {
+                bc.HasKey(bc => bc.Id);
+
+                bc.HasIndex(bc => bc.Name)
+                .IsUnique();
+
+
+                bc.Property(bc => bc.Name)
+                .IsRequired();
+            });
 
             // Seeding Roles
             RoleSeeder.SeedRoles(modelBuilder);
 
             // Seeding Users
             UserSeeder.SeedUsers(modelBuilder);
+
+            // Seeding Blog Categories
+            BlogCategorySeeder.SeedBlogCategories(modelBuilder);
         }
     }
 }

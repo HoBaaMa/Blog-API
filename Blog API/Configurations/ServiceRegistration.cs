@@ -12,6 +12,7 @@ namespace Blog_API.Configurations
             services.AddScoped<ICommentService, CommentService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ILikeService, LikeService>();
+            services.AddScoped<ICategoryService, CategoryService>();
             return services;
         }
     }

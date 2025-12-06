@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Blog_API.Models.DTOs
+﻿namespace Blog_API.Models.DTOs
 {
     public class CreateLikeDTO
     {

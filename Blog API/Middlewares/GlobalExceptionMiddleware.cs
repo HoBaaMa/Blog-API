@@ -1,9 +1,14 @@
+using Microsoft.AspNetCore.Mvc;
+
 namespace Blog_API.Middlewares
 {
+    /// <summary>
+    /// Middleware that catches unhandled exceptions and returns RFC 7807 ProblemDetails responses.
+    /// </summary>
     public class GlobalExceptionMiddleware
     {
         private readonly RequestDelegate _next;
-        private ILogger<GlobalExceptionMiddleware> _logger;
+        private readonly ILogger<GlobalExceptionMiddleware> _logger;
 
         /// <summary>
         /// Initializes a new instance of <see cref="GlobalExceptionMiddleware"/> with the next middleware delegate and a logger.
@@ -16,52 +21,89 @@ namespace Blog_API.Middlewares
 
         /// <summary>
         /// Invokes the next middleware in the pipeline and provides global exception handling for the request.
-        /// If a downstream middleware throws, the exception is logged and handled by <see cref="HandleExceptionAsync(HttpContext, Exception)"/>.
         /// </summary>
-        /// <param name="context">The current HTTP context for the request.</param>
-        /// <returns>A task that represents the asynchronous operation.</returns>
         public async Task InvokeAsync(HttpContext context)
         {
+            // Generate or extract correlation ID
+            if (!context.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId) 
+                || string.IsNullOrWhiteSpace(correlationId))
+            {
+                correlationId = Guid.NewGuid().ToString();
+            }
+            context.Items["CorrelationId"] = correlationId.ToString();
+            context.Response.Headers["X-Correlation-ID"] = correlationId.ToString();
+
             try
             {
                 await _next(context);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An unhandled exception occurred.");
+                _logger.LogError(ex, "Unhandled exception occurred. CorrelationId: {CorrelationId}", correlationId);
                 await HandleExceptionAsync(context, ex);
             }
         }
 
         /// <summary>
-        /// Maps an exception to an HTTP status code and writes a JSON response message to the given <see cref="HttpContext.Response"/>.
+        /// Maps an exception to an RFC 7807 ProblemDetails response.
         /// </summary>
-        /// <param name="context">The current HTTP context whose response will be written.</param>
-        /// <param name="exception">The exception to translate into an HTTP status and message.</param>
-        /// <returns>A task that completes when the response has been written.</returns>
-        /// <remarks>
-        /// Exception-to-status mapping:
-        /// - <see cref="KeyNotFoundException"/> => 404, returns the exception's message.
-        /// - <see cref="UnauthorizedAccessException"/> => 403, message "Access denied".
-        /// - <see cref="ArgumentException"/> => 400, message "Invalid request.".
-        /// - <see cref="InvalidOperationException">=> 400, returns the exception's message</see>
-        /// - all other exceptions => 500, message "Internal server error".
-        /// The method sets <see cref="HttpResponse.StatusCode"/> and writes the message as JSON.
-        /// </remarks>
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            //context.Response.ContentType = "application/json";
-
-            var (message, statusCode) = exception switch
+            var (title, detail, statusCode, type) = exception switch
             {
-                KeyNotFoundException => (exception.Message, 404),
-                UnauthorizedAccessException => ("Access denied", 403),
-                ArgumentException => ("Invalid request.", 400),
-                InvalidOperationException => (exception.Message, 400),
-                _ => ("Internal server error", 500)
+                KeyNotFoundException => (
+                    "Resource Not Found",
+                    exception.Message,
+                    StatusCodes.Status404NotFound,
+                    "https://tools.ietf.org/html/rfc7231#section-6.5.4"
+                ),
+                UnauthorizedAccessException => (
+                    "Forbidden",
+                    "You do not have permission to access this resource.",
+                    StatusCodes.Status403Forbidden,
+                    "https://tools.ietf.org/html/rfc7231#section-6.5.3"
+                ),
+                ArgumentException => (
+                    "Bad Request",
+                    exception.Message,
+                    StatusCodes.Status400BadRequest,
+                    "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+                ),
+                InvalidOperationException => (
+                    "Bad Request",
+                    exception.Message,
+                    StatusCodes.Status400BadRequest,
+                    "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+                ),
+                _ => (
+                    "Internal Server Error",
+                    "An unexpected error occurred. Please try again later.",
+                    StatusCodes.Status500InternalServerError,
+                    "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+                )
             };
+
+            var problemDetails = new ProblemDetails
+            {
+                Type = type,
+                Title = title,
+                Status = statusCode,
+                Detail = detail,
+                Instance = context.Request.Path
+            };
+
+            // Add correlation ID and trace ID
+            if (context.Items.TryGetValue("CorrelationId", out var correlationId))
+            {
+                problemDetails.Extensions["correlationId"] = correlationId;
+            }
+            problemDetails.Extensions["traceId"] = context.TraceIdentifier;
+
             context.Response.StatusCode = statusCode;
-            await context.Response.WriteAsJsonAsync(message);
+            context.Response.ContentType = "application/problem+json";
+            
+            await context.Response.WriteAsJsonAsync(problemDetails);
         }
     }
 }
+

@@ -49,6 +49,10 @@ namespace Blog_API.Repositories.Implementations
                 {
                     query = isAscending ?? true ? query.OrderBy(q => q.CreatedAt) : query.OrderByDescending(q => q.CreatedAt);
                 }
+                if (sortBy.Equals("LikeCount", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = isAscending ?? true ? query.OrderBy(q => q.Likes.Count) : query.OrderByDescending(q => q.Likes.Count);
+                }
             }
 
             // Pagination
@@ -58,6 +62,9 @@ namespace Blog_API.Repositories.Implementations
                 .Skip((paginationRequest.PageNumber - 1) * paginationRequest.PageSize)
                 .Take(paginationRequest.PageSize)
                 .Include(bp => bp.User)
+                .Include(bp => bp.Likes)
+                .Include(bp => bp.BlogCategory)
+                .Distinct()
                 .ToListAsync();
 
             return (BlogPosts, totalCount);
@@ -78,6 +85,8 @@ namespace Blog_API.Repositories.Implementations
                 .Skip((paginationRequest.PageNumber - 1) * paginationRequest.PageSize)
                 .Take(paginationRequest.PageSize)
                 .Include(bp => bp.User)
+                .Include(bp => bp.Likes)
+                .Include(bp => bp.BlogCategory)
                 .ToListAsync();
 
             return (blogPosts, totalCount);
@@ -87,6 +96,7 @@ namespace Blog_API.Repositories.Implementations
             await _context.BlogPosts
                 .Include(bp => bp.User)
                 .Include(bp => bp.Likes)
+                .Include(bp => bp.BlogCategory)
                 .Include(bp => bp.Tags) // Include tags for many-to-many relationship
                 .Include(c => c.Comments.Where(c=> c.ParentCommentId == null))
                     .ThenInclude(c => c.Likes)
@@ -98,6 +108,7 @@ namespace Blog_API.Repositories.Implementations
                 .Include(bp => bp.Comments.Where(c => c.ParentCommentId == null))
                     .ThenInclude(c => c.Replies)
                     .ThenInclude(r => r.User)
+                .Distinct()
                 .FirstOrDefaultAsync(bp => bp.Id == id);
 
         public async Task UpdateAsync(BlogPost blogPost)

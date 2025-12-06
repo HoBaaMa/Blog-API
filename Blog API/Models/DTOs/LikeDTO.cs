@@ -1,5 +1,4 @@
-﻿using Blog_API.Models.Entities;
-namespace Blog_API.Models.DTOs
+﻿namespace Blog_API.Models.DTOs
 {
     public class LikeDTO
     {

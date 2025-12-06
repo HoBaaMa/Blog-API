@@ -1,20 +1,9 @@
 ﻿namespace Blog_API.Models.Entities
 {
-    public enum BlogCategory
+    public class BlogCategory
     {
-        Technology,
-        Education,
-        Business,
-        Lifestyle,
-        Health,
-        Travel,
-        Food,
-        Entertainment,
-        Science,
-        Sports,
-        Finance,
-        News,
-        Opinion,
-        Other
+        public Guid Id { get; set; }
+        public required string Name { get; set; }
+        
     }
 }

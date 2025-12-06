@@ -11,6 +11,7 @@ namespace Blog_API.Configurations
             services.AddScoped<ICommentRepository, CommentRepository>();
             services.AddScoped<ILikeRepository, LikeRepository>();
             services.AddScoped<ITagRepository, TagRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
             return services;
         }
     }
